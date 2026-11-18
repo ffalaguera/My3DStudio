@@ -2,8 +2,8 @@ feature,area,priority,original,clone,notes
 Registro e inicio de sesión con email y Google,cuenta,must,yes,partial,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth) | backend: Supabase Auth (enlace mágico + Google) integrado; falta crear el proyecto y las claves
 Créditos gratis al registrarse,cuenta,must,yes,yes,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa | backend: en el primer acceso
 Subir imagen JPG/PNG/WEBP de hasta 20 MB,generación,must,yes,yes,S03; mínimo recomendado 512x512 | clon: clic / arrastrar / pegar; valida tipo / tamaño / mínimo 256 px
-Imagen a 3D,generación,must,yes,partial,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real
-Texto a 3D,generación,must,yes,partial,F02 | clon: flujo completo con proveedor falso; falta el motor real
+Imagen a 3D,generación,must,yes,partial,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real | motor: adaptador fal (TRELLIS.2; texto vía FLUX) hecho y probado con fal simulado; falta probar con FAL_KEY real
+Texto a 3D,generación,must,yes,partial,F02 | clon: flujo completo con proveedor falso; falta el motor real | motor: adaptador fal (TRELLIS.2; texto vía FLUX) hecho y probado con fal simulado; falta probar con FAL_KEY real
 Elegir modo alta calidad o topología limpia,generación,must,yes,yes,HD (~2M polígonos y minutos) frente a Smart Mesh (500-25K polígonos y 10-40 s) | clon: S01 y S03
 Coste en créditos visible antes de generar,créditos,must,yes,yes,"botón ""Generar ⚡ 55"" | clon: botón Generar con coste; POST /tasks/estimate"
 Cola de tareas asíncrona con progreso,generación,must,yes,yes,queued/running/success/failed/cancelled y progreso 0-100 | clon: API falsa: cola / progreso / posición; SSE real en backend | backend: cola en Postgres + pg-boss + SSE
@@ -21,8 +21,8 @@ Aviso de créditos insuficientes con paso a mejorar plan,pagos,must,yes,yes,S13 
 Límites por plan (concurrencia / exportaciones / historial),pagos,must,yes,yes,Free: 1 tarea a la vez y exportaciones limitadas | clon: también modelos guardados y resolución de textura
 Multivista a 3D con 2-4 imágenes,generación,should,yes,no,mejora la parte trasera del modelo
 Resolución de textura 2K/4K,generación,should,yes,yes,8K solo en planes altos | clon: con bloqueo por plan
-Texturas PBR,generación,should,yes,partial,albedo / normal / metalness / roughness | clon: ajuste presente; el proveedor falso no genera mapas
-Topología quad o triángulos,generación,should,yes,partial,clon: ajuste presente; el proveedor falso no hace quads
+Texturas PBR,generación,should,yes,partial,albedo / normal / metalness / roughness | clon: ajuste presente; el proveedor falso no genera mapas | TRELLIS.2 entrega PBR; activo cuando se use fal
+Topología quad o triángulos,generación,should,yes,partial,clon: ajuste presente; el proveedor falso no hace quads | con fal/TRELLIS.2 solo triángulos
 Control de número de polígonos,generación,should,yes,yes,deslizador 500-25000 en Smart Mesh | clon: deslizador + campo; aproximado en el proveedor falso
 Prompt de textura separado,generación,should,yes,partial,si se deja vacío se usa el prompt principal | clon: UI hecha; el proveedor falso lo ignora
 Varias variantes por generación (1/2/4),generación,should,yes,yes,Smart Mesh | clon: selector de variantes en el visor

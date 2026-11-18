@@ -8,6 +8,7 @@ import type { Ctx } from './context.js';
 import { createPool } from './db.js';
 import { requireUser } from './lib/auth.js';
 import { createMailer } from './lib/email.js';
+import { setCreditCosts } from './lib/credits.js';
 import { errorHandler, HttpError } from './lib/http.js';
 import { createStorage } from './lib/storage.js';
 import { accountRoutes } from './routes/account.js';
@@ -19,6 +20,8 @@ import { taskRoutes } from './routes/tasks.js';
 import { uploadRoutes } from './routes/uploads.js';
 
 export function createCtx(cfg: Config, overrides: Partial<Ctx> = {}): Ctx {
+  setCreditCosts({ hd: cfg.CREDITS_HD, texture4k: cfg.CREDITS_TEXTURE_4K, texture8k: cfg.CREDITS_TEXTURE_8K,
+    smartPerVariant: cfg.CREDITS_SMART_PER_VARIANT });
   const db = overrides.db ?? createPool(cfg.DATABASE_URL);
   return {
     cfg,

@@ -5,12 +5,15 @@ import { notifyTask, tx } from '../db.js';
 import { renewMonthly, settle } from '../lib/credits.js';
 import { stats } from '../lib/convert.js';
 import { FakeProvider } from '../provider/fake.js';
+import { FalProvider } from '../provider/fal.js';
 import { ProviderError, type GenerationProvider } from '../provider/provider.js';
 
 export function createProvider(ctx: Ctx): GenerationProvider {
   switch (ctx.cfg.GENERATION_PROVIDER) {
     case 'fake':
       return new FakeProvider(ctx.cfg.NODE_ENV === 'test' ? 20 : 400);
+    case 'fal':
+      return new FalProvider({ key: ctx.cfg.FAL_KEY!, baseUrl: ctx.cfg.FAL_BASE_URL });
   }
 }
 

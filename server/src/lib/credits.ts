@@ -29,10 +29,16 @@ export async function planOf(c: Tx | Db, userId: string): Promise<PlanRow> {
   return r.rows[0];
 }
 
-/** Coste en créditos. PROVISIONAL: se ajusta con el coste real de GPU en /replica-launch. */
+/** Tabla de costes en créditos (de la configuración). PROVISIONAL: se ajusta al coste real del motor. */
+export interface CreditCosts { hd: number; texture4k: number; texture8k: number; smartPerVariant: number }
+let COSTS: CreditCosts = { hd: 15, texture4k: 10, texture8k: 20, smartPerVariant: 100 };
+export function setCreditCosts(c: CreditCosts): void {
+  COSTS = c;
+}
+
 export function costOf(series: 'hd' | 'smart', p: { texture: boolean; textureResolution: '2k' | '4k' | '8k'; variants: number }): number {
-  if (series === 'smart') return 100 * p.variants;
-  return 15 + (p.texture ? { '2k': 0, '4k': 10, '8k': 20 }[p.textureResolution] : 0);
+  if (series === 'smart') return COSTS.smartPerVariant * p.variants;
+  return COSTS.hd + (p.texture ? { '2k': 0, '4k': COSTS.texture4k, '8k': COSTS.texture8k }[p.textureResolution] : 0);
 }
 
 interface Account {

@@ -38,7 +38,14 @@ const schema = z
     EMAIL_FROM: z.string().default('Forma <hola@example.com>'),
 
     // Motor 3D y conversión
-    GENERATION_PROVIDER: z.enum(['fake']).default('fake'),
+    GENERATION_PROVIDER: z.enum(['fake', 'fal']).default('fake'),
+    FAL_KEY: z.string().optional(),
+    FAL_BASE_URL: z.string().url().optional(),
+    // Coste en créditos (PROVISIONAL, se fija en /replica-launch). Con fal cada modelo cuesta ~$0,30: ver backend.md
+    CREDITS_HD: z.coerce.number().int().positive().default(15),
+    CREDITS_TEXTURE_4K: z.coerce.number().int().min(0).default(10),
+    CREDITS_TEXTURE_8K: z.coerce.number().int().min(0).default(20),
+    CREDITS_SMART_PER_VARIANT: z.coerce.number().int().positive().default(100),
     PROVIDER_MAX_CONCURRENCY: z.coerce.number().int().positive().default(4),
     BLENDER_PATH: z.string().optional(),
   })
@@ -53,6 +60,8 @@ const schema = z
     need(c.STORAGE_DRIVER === 'r2' && !(c.R2_ACCOUNT_ID && c.R2_ACCESS_KEY_ID && c.R2_SECRET_ACCESS_KEY && c.R2_BUCKET),
       'R2_BUCKET', 'faltan variables R2_*');
     need(c.NODE_ENV === 'production' && c.STORAGE_DRIVER === 'local', 'STORAGE_DRIVER', 'usa r2 en producción');
+    need(c.GENERATION_PROVIDER === 'fal' && !c.FAL_KEY, 'FAL_KEY', 'hace falta con GENERATION_PROVIDER=fal');
+    need(c.NODE_ENV === 'production' && c.GENERATION_PROVIDER === 'fake', 'GENERATION_PROVIDER', 'el motor falso no se usa en producción');
     need(c.EMAIL_DRIVER === 'resend' && !c.RESEND_API_KEY, 'RESEND_API_KEY', 'hace falta con EMAIL_DRIVER=resend');
     need(!!c.STRIPE_SECRET_KEY !== !!c.STRIPE_WEBHOOK_SECRET, 'STRIPE_WEBHOOK_SECRET', 'STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET van juntas');
     need(c.NODE_ENV !== 'production' && !!c.STRIPE_SECRET_KEY?.startsWith('sk_live_'), 'STRIPE_SECRET_KEY',

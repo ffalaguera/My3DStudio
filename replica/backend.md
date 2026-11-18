@@ -43,11 +43,65 @@ Claude no crea cuentas ni escribe claves. Cuando las tengas, ponlas en `server/.
 Los ámbitos básicos de Google (`openid email profile`) no necesitan la verificación larga de ámbitos sensibles, pero
 la pantalla de consentimiento con tu logo y nombre sí pasa una verificación de marca (días). Empiézala pronto.
 
-## Decisión pendiente: el motor 3D
+## Motor 3D (decidido el 2026-11-18): TRELLIS.2 en fal.ai ahora, en Modal propio después
 
-Sigue abierta (ver `architecture.md`). El servidor tiene la interfaz `GenerationProvider` (`src/provider/provider.ts`)
-y solo el adaptador `fake`, que genera una vasija procedural por revolución. **Imagen a 3D y texto a 3D no son reales
-hasta que se elija y se conecte un motor.** La API de Tripo queda descartada por sus términos.
+- **Adaptador `fal`** (`src/provider/fal.ts`), activado con `GENERATION_PROVIDER=fal` y `FAL_KEY`:
+  - Imagen a 3D → `fal-ai/trellis-2`. La imagen va como data URI: no hace falta que el almacén sea público.
+  - Texto a 3D → `fal-ai/flux/schnell` crea una imagen de referencia (fondo liso, objeto centrado) → TRELLIS.2. El
+    filtro de seguridad de FLUX corta descripciones no permitidas **antes** de gastar en el 3D.
+  - Alto detalle: 1024³, decimación a 500.000 vértices, textura 2K/4K. **8K se entrega como 4K** (máximo de TRELLIS.2).
+  - Topología limpia: `decimation_target` = polígonos ÷ 2, `remesh`. **Solo triángulos**: TRELLIS.2 no hace quads, así
+    que la opción "Cuadriláteros" hoy no cambia nada (pendiente: retopología a quads en el trabajador con Blender).
+  - Variantes: una petición por variante con semillas distintas, en paralelo.
+  - "Sin textura": se quitan las imágenes del GLB. PBR: TRELLIS.2 siempre entrega PBR.
+  - Progreso: fal no da porcentaje; se estima por estado (en cola / en curso) y tiempo típico.
+  - Cancelación: se pide a fal con `cancel_url`. Descargas solo desde dominios de fal (evita SSRF), con tope de tamaño y
+    comprobación de cabecera `glTF`.
+- **Probado** con un fal simulado (9 tests: parámetros, variantes, texto→imagen→3D, contenido no permitido, 422, fallo de
+  ejecución, archivo no GLB, URL ajena, clave rechazada, cancelación, sin textura y recorrido completo del trabajador).
+  **Sin probar con fal real**: hace falta tu `FAL_KEY`.
+- **Después (Modal)**: un adaptador propio con TRELLIS.2 en GPU serverless, misma interfaz, cuando el volumen compense.
+
+### Costes: con fal y los créditos actuales se pierde dinero
+
+| | por modelo | Pro (3.000 créditos, 13–19 €/mes) a 15 créditos = 200 modelos |
+| --- | --- | --- |
+| fal TRELLIS.2 1024³ | ≈ $0,30 (+ ≈ $0,003 de FLUX en texto a 3D) | ≈ $60 de coste por usuario Pro que lo gaste todo |
+| TRELLIS.2 propio en Modal (H100 ≈ $0,0011/s, ~40 s con post-proceso) | ≈ $0,05 | ≈ $10 |
+| Tripo (referencia pública) | $0,16 a usuarios Pro (modelo propio) | — |
+
+Para no perder dinero con fal y los precios provisionales de los planes, un modelo de alto detalle debería costar
+**≈ 70–100 créditos** (no 15), o subir los precios. Los costes ya son variables de entorno (`CREDITS_HD`,
+`CREDITS_TEXTURE_4K`, `CREDITS_TEXTURE_8K`, `CREDITS_SMART_PER_VARIANT`); la cifra final se decide en `/replica-launch`.
+Mientras tanto, `PROVIDER_MAX_CONCURRENCY` limita el gasto simultáneo.
+Fuentes de precios: [fal TRELLIS.2](https://fal.ai/models/fal-ai/trellis-2) (la página exacta pide sesión; cifras de
+[su guía](https://fal.ai/learn/devs/trellis-2-image-to-3d-prompt-guide)), [Modal](https://www.spheron.network/blog/modal-gpu-pricing-2026-per-second-billing/)
+(tercero; confirmar en modal.com/pricing).
+
+### Licencias para revisión legal
+
+No es asesoramiento legal. Comprobado el 2026-11-18; las páginas pueden cambiar.
+
+| componente | licencia | ¿se usa? | fuente |
+| --- | --- | --- | --- |
+| TRELLIS.2 (código y pesos 4B) | **MIT** | sí, vía fal | [Hugging Face](https://huggingface.co/microsoft/TRELLIS.2-4B), [GitHub](https://github.com/microsoft/TRELLIS.2) |
+| nvdiffrast (horneado de texturas al exportar GLB) | NVIDIA Source Code License "1-Way Commercial": **solo no comercial** | dentro del pipeline de fal (no sabemos si lo han sustituido) | [issue #22 de TRELLIS.2](https://github.com/microsoft/TRELLIS.2/issues/22), [texto de la licencia](https://huggingface.co/spaces/ginipick/SORA-3D/blob/e3df509037b8d7a49ea8599caebb1c08922cea96/extensions/nvdiffrast/LICENSE.txt) |
+| nvdiffrec | igual que nvdiffrast | solo visualización; no hace falta | issue #22 |
+| DINOv3 (codificador de imagen, obligatorio) | Licencia propia de Meta; permite uso comercial | sí, vía fal | [Meta](https://ai.meta.com/resources/models-and-libraries/dinov3-license) |
+| RMBG-2.0 (quitar fondo en el pipeline oficial) | CC BY-NC 4.0 / licencia comercial de Bria: **no comercial** sin acuerdo | posiblemente dentro de fal | [Hugging Face](https://huggingface.co/briaai/RMBG-2.0) |
+| FLUX.1 [schnell] | Apache 2.0 (confirmar en su ficha) | sí, vía fal (texto a 3D) | [fal](https://fal.ai/models/fal-ai/flux/schnell/api) |
+| Hunyuan3D 2.x | Licencia de Tencent: **excluye la UE, el Reino Unido y Corea del Sur** | **no** | [LICENSE](https://huggingface.co/tencent/Hunyuan3D-2.1/blob/main/LICENSE) |
+| Tripo API | sus términos prohíben usar las salidas para competir | **no** | tripo3d.ai/terms |
+
+Preguntas para el abogado y para fal (por escrito):
+1. ¿El endpoint `fal-ai/trellis-2` usa nvdiffrast y RMBG-2.0, o los ha sustituido? Si los usa, ¿cubre fal la licencia
+   comercial o recae en el cliente?
+2. ¿Permiten los términos de fal ofrecer la generación a usuarios finales dentro de un producto de pago que compite con
+   otros generadores 3D?
+3. ¿Qué licencia tienen las salidas que entregamos a los usuarios (para prometer "uso comercial" en los planes de pago)?
+4. Para el paso a Modal: las sustituciones previstas son nvdiffrast → [uvrast](https://github.com/memgrafter/uvrast) o
+   el horneado con cuBVH de [este fork](https://github.com/maksonlee/TRELLIS.2), y RMBG-2.0 → BiRefNet (verificar su
+   licencia). Revisar esos repos de terceros antes de usarlos.
 
 ## Hecho
 
