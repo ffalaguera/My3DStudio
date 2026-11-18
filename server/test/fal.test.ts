@@ -15,7 +15,8 @@ let server: Server;
 let base = '';
 let calls: Call[] = [];
 let cancels: string[] = [];
-let behaviour: { submit422?: boolean; runError?: boolean; nsfw?: boolean; badGlb?: boolean; foreignUrl?: boolean; slow?: boolean } = {};
+let behaviour: { submit422?: boolean; runError?: boolean; nsfw?: boolean; badGlb?: boolean; foreignUrl?: boolean; slow?: boolean; llmDown?: boolean; llmEmpty?: boolean } = {};
+let llmCalls: Record<string, unknown>[] = [];
 let glb: Buffer;
 
 beforeAll(async () => {
@@ -23,6 +24,13 @@ beforeAll(async () => {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
   const reqs = new Map<string, { model: string; polls: number }>();
+  // LLM de traducción (OpenRouter en fal, compatible con OpenAI; llamada directa, sin cola)
+  app.post('/openrouter/router/openai/v1/chat/completions', (req, res) => {
+    llmCalls.push(req.body);
+    if (behaviour.llmDown) return void res.status(503).json({ detail: 'no disponible' });
+    const content = behaviour.llmEmpty ? '' : '"a white ceramic teapot with a bamboo handle"';
+    res.json({ choices: [{ message: { role: 'assistant', content } }] });
+  });
   app.post(/^\/(.+)$/, (req, res) => {
     const model = (req.params as unknown as string[])[0];
     calls.push({ model, body: req.body });
@@ -64,12 +72,13 @@ beforeAll(async () => {
 });
 afterAll(() => new Promise<void>((ok) => server.close(() => ok())));
 beforeEach(() => {
+  llmCalls = [];
   calls = [];
   cancels = [];
   behaviour = {};
 });
 
-const provider = () => new FalProvider({ key: 'clave-de-prueba', baseUrl: base, pollMs: 5 });
+const provider = () => new FalProvider({ key: 'clave-de-prueba', baseUrl: base, syncBaseUrl: base, pollMs: 5 });
 const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const input = (over: Partial<GenerationInput> = {}): GenerationInput => ({
   taskId: randomUUID(), type: 'image_to_model', series: 'hd', image: { bytes: png, contentType: 'image/png' },
@@ -100,12 +109,27 @@ describe('FalProvider contra un fal simulado', () => {
     expect(new Set(calls.map((c) => c.body['seed'])).size).toBe(2);
   });
 
-  it('texto → FLUX (referencia) → TRELLIS.2 con la imagen generada', async () => {
-    await provider().generate(input({ type: 'text_to_model', image: undefined, prompt: 'una tetera de cerámica' }), async () => {}, noAbort());
+  it('texto → traducción al inglés → FLUX (referencia) → TRELLIS.2 con la imagen generada', async () => {
+    await provider().generate(input({ type: 'text_to_model', image: undefined, prompt: 'una tetera de cerámica blanca con asa de bambú' }), async () => {}, noAbort());
+    expect(llmCalls).toHaveLength(1);
+    expect(llmCalls[0]).toMatchObject({ model: 'google/gemini-2.5-flash-lite', temperature: 0 });
+    const msgs = llmCalls[0]['messages'] as { role: string; content: string }[];
+    expect(msgs[0].role).toBe('system');
+    expect(msgs[1]).toEqual({ role: 'user', content: 'una tetera de cerámica blanca con asa de bambú' });
     expect(calls.map((c) => c.model)).toEqual(['fal-ai/flux/schnell', 'fal-ai/trellis-2']);
-    expect(String(calls[0].body['prompt'])).toMatch(/^una tetera de cerámica\. single object/);
+    // sin comillas y en inglés
+    expect(String(calls[0].body['prompt'])).toMatch(/^a white ceramic teapot with a bamboo handle\. single object/);
     expect(calls[0].body['enable_safety_checker']).toBe(true);
     expect(calls[1].body['image_url']).toBe(`${base}/files/ref.png`);
+  });
+
+  it('si la traducción falla o viene vacía, se usa el texto original (nunca bloquea)', async () => {
+    for (const b of [{ llmDown: true }, { llmEmpty: true }]) {
+      behaviour = b;
+      calls = [];
+      await provider().generate(input({ type: 'text_to_model', image: undefined, prompt: 'una lámpara' }), async () => {}, noAbort());
+      expect(String(calls[0].body['prompt'])).toMatch(/^una lámpara\. single object/);
+    }
   });
 
   it('texto no permitido: se para antes del 3D', async () => {

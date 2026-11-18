@@ -2,8 +2,8 @@ feature,area,priority,original,clone,notes
 Registro e inicio de sesión con email y Google,cuenta,must,yes,partial,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth) | backend: Supabase Auth (enlace mágico + Google) integrado; falta crear el proyecto y las claves
 Créditos gratis al registrarse,cuenta,must,yes,yes,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa | backend: en el primer acceso
 Subir imagen JPG/PNG/WEBP de hasta 20 MB,generación,must,yes,yes,S03; mínimo recomendado 512x512 | clon: clic / arrastrar / pegar; valida tipo / tamaño / mínimo 256 px
-Imagen a 3D,generación,must,yes,partial,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real | motor: adaptador fal (TRELLIS.2; texto vía FLUX) hecho y probado con fal simulado; falta probar con FAL_KEY real
-Texto a 3D,generación,must,yes,partial,F02 | clon: flujo completo con proveedor falso; falta el motor real | motor: adaptador fal (TRELLIS.2; texto vía FLUX) hecho y probado con fal simulado; falta probar con FAL_KEY real
+Imagen a 3D,generación,must,yes,partial,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real | motor: fal real probado (TRELLIS.2; texto traducido al inglés → FLUX → TRELLIS.2)
+Texto a 3D,generación,must,yes,partial,F02 | clon: flujo completo con proveedor falso; falta el motor real | motor: fal real probado (TRELLIS.2; texto traducido al inglés → FLUX → TRELLIS.2)
 Elegir modo alta calidad o topología limpia,generación,must,yes,yes,HD (~2M polígonos y minutos) frente a Smart Mesh (500-25K polígonos y 10-40 s) | clon: S01 y S03
 Coste en créditos visible antes de generar,créditos,must,yes,yes,"botón ""Generar ⚡ 55"" | clon: botón Generar con coste; POST /tasks/estimate"
 Cola de tareas asíncrona con progreso,generación,must,yes,yes,queued/running/success/failed/cancelled y progreso 0-100 | clon: API falsa: cola / progreso / posición; SSE real en backend | backend: cola en Postgres + pg-boss + SSE

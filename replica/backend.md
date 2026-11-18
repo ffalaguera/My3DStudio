@@ -73,6 +73,7 @@ construcción de imágenes de GPU). Ese trabajo está revertido en el historial 
 | imagen → 3D (jarrón de prueba) | 79 s | **fiel**: la forma y el color de la imagen; 497.078 caras, 303.001 vértices, GLB de 15,1 MB con texturas WebP | ≈ $0,30 |
 | texto → 3D ("una tetera de cerámica blanca con asa de bambú") | 67 s | **no fiel**: salió un cuenco blanco, sin pico ni asa; 491.474 caras | ≈ $0,30 + FLUX |
 | primer intento de imagen | — | falló en nuestro post-proceso (BUG-009) después de que fal lo cobrara | ≈ $0,30 |
+| texto → 3D con traducción al inglés (mismo prompt) | 53 s | **fiel**: tetera blanca de cerámica con asa de bambú; 482.178 caras, GLB de 17,6 MB | ≈ $0,30 + FLUX + traducción |
 
 Total de las pruebas ≈ $0,90–1,00 (cifra exacta en fal.ai → Billing).
 
@@ -80,9 +81,10 @@ Lo aprendido:
 - `decimation_target` se comporta como **caras**, no vértices (500.000 → 497.078 caras). El adaptador ya lo trata así.
 - Los GLB llegan con `EXT_texture_webp` obligatorio. El servidor ya los lee (BUG-009). Algunos importadores antiguos no
   leen WebP: si da problemas, convertir a PNG en el post-proceso.
-- **Texto a 3D en español es poco fiel**: el paso de texto a imagen (FLUX) entiende peor el español. Opciones:
-  traducir el prompt al inglés antes de FLUX con un LLM barato, o enseñar la imagen de referencia al usuario antes de
-  gastar en el 3D (como hace Tripo con "Generate Image for 3D").
+- **Texto a 3D en español era poco fiel** (FLUX entiende peor el español). **Resuelto**: antes de FLUX la descripción se
+  traduce al inglés con `google/gemini-2.5-flash-lite` vía OpenRouter en fal (`fal.run/openrouter/router/openai/v1/chat/completions`,
+  cobro por tokens: fracciones de céntimo). Si la traducción falla, tarda más de 15 s o viene vacía, se usa el texto
+  original. Pendiente opcional: enseñar la imagen de referencia antes de gastar en el 3D, como Tripo.
 - Si el saldo de fal se acaba, fal responde 403 y todas las generaciones fallan (con créditos devueltos). Activar
   recarga automática o un aviso de saldo bajo antes de lanzar.
 
