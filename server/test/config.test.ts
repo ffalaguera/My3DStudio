@@ -6,16 +6,14 @@ const base = {
 };
 
 it('las variables vacías de .env.example cuentan como no definidas', () => {
-  const c = loadConfig({ ...base, MODAL_TRELLIS_URL: '', FAL_BASE_URL: '', STRIPE_SECRET_KEY: '', STRIPE_WEBHOOK_SECRET: '' });
-  expect(c.MODAL_TRELLIS_URL).toBeUndefined();
+  const c = loadConfig({ ...base, FAL_KEY: '', FAL_BASE_URL: '', STRIPE_SECRET_KEY: '', STRIPE_WEBHOOK_SECRET: '' });
+  expect(c.FAL_BASE_URL).toBeUndefined();
   expect(c.GENERATION_PROVIDER).toBe('fake');
 });
 
-it('modal y fal exigen sus credenciales; el motor falso no vale en producción', () => {
-  expect(() => loadConfig({ ...base, GENERATION_PROVIDER: 'modal' })).toThrow(/MODAL_TRELLIS_URL/);
-  expect(() => loadConfig({ ...base, GENERATION_PROVIDER: 'modal', MODAL_TRELLIS_URL: 'https://a.modal.run', MODAL_SERVICE_TOKEN: 'corto' }))
-    .toThrow(/MODAL_SERVICE_TOKEN/);
+it('fal exige FAL_KEY; el motor falso no vale en producción', () => {
   expect(() => loadConfig({ ...base, GENERATION_PROVIDER: 'fal' })).toThrow(/FAL_KEY/);
+  expect(() => loadConfig({ ...base, GENERATION_PROVIDER: 'fal', FAL_KEY: '' })).toThrow(/FAL_KEY/);
   expect(() => loadConfig({ ...base, NODE_ENV: 'production', LOCAL_AUTH: '0', SUPABASE_URL: 'https://p.supabase.co',
     STORAGE_DRIVER: 'r2', R2_ACCOUNT_ID: 'a', R2_ACCESS_KEY_ID: 'b', R2_SECRET_ACCESS_KEY: 'c', R2_BUCKET: 'd' }))
     .toThrow(/motor falso/);
