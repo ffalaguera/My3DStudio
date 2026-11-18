@@ -1,0 +1,58 @@
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Modal } from '../ui/modal';
+import { Icon } from '../ui/icon';
+import { Api, ApiError } from '../data/api';
+import { Gates } from './gates';
+import { Toasts } from '../ui/toast';
+
+/** S02: acceso y registro. Con la API falsa no hay contraseñas ni proveedores reales. */
+@Component({
+  selector: 'app-login-modal',
+  imports: [Modal, Icon, FormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <ui-modal [open]="gates.loginOpen()" heading="Entra y empieza a crear" (closed)="gates.loginFinished(!!gates.me())">
+      <p class="text-sm text-text-muted flex items-center gap-2">
+        <ui-icon name="zap" /> Al registrarte recibes 200 créditos gratis cada mes.
+      </p>
+      <button type="button" class="btn btn-secondary w-full" [disabled]="busy()" (click)="go('google')">
+        <ui-icon name="chrome" /> Continuar con Google
+      </button>
+      <div class="flex items-center gap-3 text-xs text-text-muted"><span class="flex-1 h-px bg-border"></span>o<span class="flex-1 h-px bg-border"></span></div>
+      <form class="flex flex-col gap-3" (ngSubmit)="go('email')">
+        <label class="label">Email
+          <input class="field h-10 px-3" type="email" name="email" autocomplete="email" required
+            [(ngModel)]="email" [attr.aria-invalid]="!!error()" aria-describedby="login-error" />
+        </label>
+        @if (error()) { <p id="login-error" class="error-text" role="alert">{{ error() }}</p> }
+        <button type="submit" class="btn btn-primary w-full" [disabled]="busy()" [attr.aria-busy]="busy()">
+          @if (busy()) { <ui-icon name="loader-circle" class="animate-spin" /> Entrando… } @else { Recibir enlace de acceso }
+        </button>
+      </form>
+      <p class="text-xs text-text-muted">Al continuar aceptas los términos y la política de privacidad.</p>
+    </ui-modal>
+  `,
+})
+export class LoginModal {
+  protected readonly gates = inject(Gates);
+  private readonly api = inject(Api);
+  private readonly toasts = inject(Toasts);
+  protected email = '';
+  protected readonly busy = signal(false);
+  protected readonly error = signal('');
+
+  protected async go(method: 'google' | 'email'): Promise<void> {
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.signIn(method, this.email);
+      this.gates.loginFinished(true);
+      this.toasts.show('success', 'Ya has entrado');
+    } catch (e) {
+      this.error.set(e instanceof ApiError ? e.message : 'No se ha podido entrar. Inténtalo de nuevo');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+}

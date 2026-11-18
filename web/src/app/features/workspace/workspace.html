@@ -1,0 +1,269 @@
+<div class="flex flex-col lg:flex-row gap-3 p-3 lg:h-[calc(100dvh-4.5rem)]">
+
+  <!-- Carril de herramientas -->
+  <div role="tablist" aria-label="Herramientas" aria-orientation="vertical"
+    class="flex lg:flex-col gap-1 p-1 rounded-lg bg-surface overflow-x-auto lg:w-rail shrink-0">
+    @for (t of tools; track t.id) {
+      <button type="button" role="tab" [attr.aria-selected]="t.id === 'model'" [attr.aria-disabled]="!t.ready"
+        [attr.title]="t.ready ? null : 'Próximamente'"
+        class="relative flex flex-col items-center justify-center gap-1 min-w-16 h-14 rounded-md text-xs"
+        [class.bg-highlight-surface]="t.id === 'model'" [class.text-text]="t.id === 'model'"
+        [class.text-text-muted]="t.id !== 'model'" [class.opacity-50]="!t.ready">
+        <ui-icon [name]="t.icon" [size]="20" />
+        {{ t.label }}
+        @if (!t.ready) { <span class="sr-only">(próximamente)</span> }
+      </button>
+    }
+  </div>
+
+  <!-- Panel de generación (S03) -->
+  <section aria-labelledby="gen-title" class="panel flex flex-col lg:w-panel shrink-0 lg:overflow-y-auto">
+    <div class="p-4 flex flex-col gap-4 flex-1">
+      <h1 id="gen-title" class="text-sm font-semibold flex items-center gap-2"><ui-icon name="sparkles" /> Generar modelo</h1>
+
+      <div role="radiogroup" aria-label="Tipo de modelo" class="seg seg-accent w-full">
+        <button type="button" role="radio" class="flex-1" [attr.aria-checked]="series() === 'hd'" (click)="series.set('hd')">Alto detalle</button>
+        <button type="button" role="radio" class="flex-1" [attr.aria-checked]="series() === 'smart'" (click)="series.set('smart')">Topología limpia</button>
+      </div>
+      <p class="hint -mt-2">
+        @if (series() === 'hd') { Máximo detalle de superficie. Para render, impresión 3D y piezas protagonistas. }
+        @else { Malla ligera y ordenada, lista para motores de juego y tiempo real. }
+      </p>
+
+      <div role="radiogroup" aria-label="Entrada" class="seg w-full">
+        <button type="button" role="radio" class="flex-1 flex items-center justify-center gap-2" [attr.aria-checked]="mode() === 'image_to_model'"
+          (click)="mode.set('image_to_model')"><ui-icon name="image" /> Imagen</button>
+        <button type="button" role="radio" class="flex-1 flex items-center justify-center gap-2" [attr.aria-checked]="mode() === 'text_to_model'"
+          (click)="mode.set('text_to_model')"><ui-icon name="type" /> Texto</button>
+      </div>
+
+      @if (mode() === 'image_to_model') {
+        <app-dropzone [preview]="upload()?.previewUrl ?? null" [busy]="uploading()" [error]="uploadError()"
+          (file)="onFile($event)" (cleared)="upload.set(null)" />
+      } @else {
+        <label class="label">Describe el objeto
+          <textarea class="field p-3 min-h-28" rows="4" maxlength="1024" [ngModel]="prompt()"
+            (ngModelChange)="prompt.set($event); promptError.set('')" (keydown.control.enter)="generate()"
+            placeholder="Una tetera de cerámica esmaltada con asa de bambú" [attr.aria-invalid]="!!promptError()"
+            aria-describedby="prompt-count prompt-error"></textarea>
+        </label>
+        <div class="flex justify-between -mt-2">
+          <span id="prompt-error" class="error-text" role="alert">{{ promptError() }}</span>
+          <span id="prompt-count" class="hint" [class.text-danger]="prompt().length >= 1024">
+            @if (prompt().length > 800) { {{ prompt().length }} / 1024 }
+          </span>
+        </div>
+        @if (showTexturePrompt()) {
+          <label class="label">Cómo es su superficie (opcional)
+            <textarea class="field p-3" rows="2" maxlength="1024" [ngModel]="texturePrompt()" (ngModelChange)="texturePrompt.set($event)"
+              placeholder="Esmalte azul cobalto con pequeñas grietas"></textarea>
+          </label>
+        } @else {
+          <button type="button" class="btn btn-ghost btn-sm self-start" (click)="showTexturePrompt.set(true)"><ui-icon name="plus" /> Describir la textura aparte</button>
+        }
+      }
+
+      <!-- Ajustes -->
+      <div class="rounded-md bg-surface">
+        <button type="button" class="w-full flex items-center justify-between p-3 text-sm" [attr.aria-expanded]="settingsOpen()"
+          aria-controls="gen-settings" (click)="settingsOpen.set(!settingsOpen())">
+          {{ series() === 'hd' ? 'Geometría y textura' : 'Topología' }}
+          <ui-icon [name]="settingsOpen() ? 'chevron-up' : 'chevron-down'" />
+        </button>
+        @if (settingsOpen()) {
+          <div id="gen-settings" class="px-3 pb-3 flex flex-col gap-4">
+            @if (series() === 'hd') {
+              <label class="flex items-center justify-between text-sm">Con textura
+                <button type="button" role="switch" [attr.aria-checked]="params().texture" (click)="setParam('texture', !params().texture)"
+                  class="w-9 h-5 rounded-pill relative transition-colors duration-fast" [class.bg-accent]="params().texture" [class.bg-surface-3]="!params().texture">
+                  <span class="absolute top-0.5 w-4 h-4 rounded-full transition-all duration-fast"
+                    [class.right-0.5]="params().texture" [class.bg-on-accent]="params().texture"
+                    [class.left-0.5]="!params().texture" [class.bg-text-muted]="!params().texture"></span>
+                </button>
+              </label>
+              @if (params().texture) {
+                <div role="radiogroup" aria-label="Resolución de textura" class="flex gap-2">
+                  @for (r of ['2k', '4k', '8k']; track r) {
+                    <button type="button" role="radio" class="chip flex-1 justify-center" [attr.aria-checked]="params().textureResolution === r"
+                      (click)="setParam('textureResolution', $any(r))">
+                      {{ r.toUpperCase() }}
+                      @if (gates.me() && r !== '2k' && (r === '8k' ? gates.me()!.plan.maxTextureResolution !== '8k' : gates.me()!.plan.maxTextureResolution === '2k')) {
+                        <ui-icon name="lock" [size]="12" label="de pago" />
+                      }
+                    </button>
+                  }
+                </div>
+                <label class="flex items-center justify-between text-sm">Materiales PBR
+                  <button type="button" role="switch" [attr.aria-checked]="params().pbr" (click)="setParam('pbr', !params().pbr)"
+                    class="w-9 h-5 rounded-pill relative" [class.bg-accent]="params().pbr" [class.bg-surface-3]="!params().pbr">
+                    <span class="absolute top-0.5 w-4 h-4 rounded-full" [class.right-0.5]="params().pbr" [class.bg-on-accent]="params().pbr"
+                      [class.left-0.5]="!params().pbr" [class.bg-text-muted]="!params().pbr"></span>
+                  </button>
+                </label>
+              }
+            } @else {
+              <div role="radiogroup" aria-label="Topología" class="flex gap-2">
+                <button type="button" role="radio" class="chip flex-1 justify-center" [attr.aria-checked]="params().topology === 'quad'" (click)="setParam('topology', 'quad')">Cuadriláteros</button>
+                <button type="button" role="radio" class="chip flex-1 justify-center" [attr.aria-checked]="params().topology === 'tri'" (click)="setParam('topology', 'tri')">Triángulos</button>
+              </div>
+              <label class="label">Polígonos
+                <span class="flex items-center gap-3">
+                  <input type="range" min="500" max="25000" step="500" class="flex-1 accent-[rgb(var(--color-highlight))]"
+                    [ngModel]="params().faceLimit" (ngModelChange)="setParam('faceLimit', +$event)"
+                    [attr.aria-valuetext]="(params().faceLimit | number: '1.0-0' : 'es') + ' polígonos'" />
+                  <input type="number" min="500" max="25000" class="field h-8 w-24 px-2 text-right" aria-label="Número de polígonos"
+                    [ngModel]="params().faceLimit" (ngModelChange)="setParam('faceLimit', +$event)" [attr.aria-invalid]="!!faceLimitError()" />
+                </span>
+              </label>
+              @if (faceLimitError()) { <p class="error-text -mt-2" role="alert">{{ faceLimitError() }}</p> }
+              <div class="label">Variantes
+                <div role="radiogroup" aria-label="Variantes" class="flex gap-2">
+                  @for (v of [1, 2, 4]; track v) {
+                    <button type="button" role="radio" class="chip flex-1 justify-center" [attr.aria-checked]="params().variants === v"
+                      (click)="setParam('variants', $any(v))">{{ v }}</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="flex items-center justify-between text-sm">
+        <span id="privacy-label">Visibilidad</span>
+        <div role="radiogroup" aria-labelledby="privacy-label" class="seg">
+          <button type="button" role="radio" class="flex items-center gap-1" [attr.aria-checked]="privacy() === 'public'" (click)="privacy.set('public')">
+            <ui-icon name="globe" [size]="14" /> Público</button>
+          <button type="button" role="radio" class="flex items-center gap-1" [attr.aria-checked]="privacy() === 'private'" (click)="privacy.set('private')">
+            <ui-icon name="lock" [size]="14" /> Privado</button>
+        </div>
+      </div>
+      @if (privacy() === 'public') { <p class="hint -mt-2">Cualquiera con el enlace podrá verlo.</p> }
+    </div>
+
+    <div class="p-4 border-t border-border sticky bottom-0 bg-surface-2 rounded-b-lg">
+      @let est = estimate();
+      @if (est && !est.allowed && est.reason !== 'not_signed_in') {
+        <p class="text-xs text-warning mb-2 flex items-start gap-1"><ui-icon name="info" [size]="14" /> {{ est.detail }}</p>
+      }
+      <button type="button" class="btn btn-primary btn-lg w-full" (click)="generate()" [disabled]="submitting()" [attr.aria-busy]="submitting()">
+        @if (submitting()) { <ui-icon name="loader-circle" class="animate-spin" /> Enviando… }
+        @else {
+          Generar
+          @if (est) { <span class="flex items-center gap-1 text-sm opacity-80"><ui-icon name="zap" [size]="14" />{{ est.credits }}<span class="sr-only">créditos</span></span> }
+        }
+      </button>
+    </div>
+  </section>
+
+  <!-- Visor (S04 / S05) -->
+  <section aria-label="Resultado" class="relative flex-1 min-h-80 lg:min-h-0 rounded-lg overflow-hidden flex flex-col">
+    @let t = selectedTask();
+    @let a = asset();
+    @if (a) {
+      <app-viewer class="flex-1" [url]="a.glbUrl" [name]="a.name"
+        [statsLine]="(a.faceCount | number: '1.0-0' : 'es') + ' caras · ' + (a.vertexCount | number: '1.0-0' : 'es') + ' vértices'" />
+      <div class="absolute left-3 top-3 right-16 flex flex-wrap items-center gap-2">
+        @if (renaming()) {
+          <form class="flex gap-2" (ngSubmit)="saveName(a)">
+            <input class="field h-8 px-2 w-56" aria-label="Nombre del modelo" maxlength="120" name="n" [ngModel]="nameDraft()" (ngModelChange)="nameDraft.set($event)" />
+            <button class="btn btn-sm btn-primary" type="submit">Guardar</button>
+            <button class="btn btn-sm btn-ghost" type="button" (click)="renaming.set(false)">Cancelar</button>
+          </form>
+        } @else {
+          <h2 class="text-sm font-semibold truncate max-w-xs" [title]="a.name">{{ a.name }}</h2>
+          <button type="button" class="btn btn-icon" aria-label="Renombrar" (click)="startRename(a)"><ui-icon name="pencil" [size]="14" /></button>
+        }
+        <span class="badge">{{ a.series === 'hd' ? 'Alto detalle' : 'Topología limpia' }}{{ a.textureResolution ? ' · ' + a.textureResolution.toUpperCase() : '' }}</span>
+        @if (a.expiresAt) { <span class="badge text-warning">Se borra el {{ a.expiresAt | date: 'd MMM, HH:mm' : undefined : 'es' }}</span> }
+      </div>
+      @if (variants().length) {
+        <div role="radiogroup" aria-label="Variantes" class="absolute left-3 bottom-10 flex gap-2">
+          @for (v of variants(); track v; let i = $index) {
+            <button type="button" role="radio" class="chip bg-surface-2/80" [attr.aria-checked]="v === a.id" (click)="select({ modelo: v })">Variante {{ i + 1 }}</button>
+          }
+        </div>
+      }
+      <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-1 rounded-pill bg-surface-2/90 backdrop-blur shadow-float">
+        <button type="button" class="btn btn-sm btn-ghost" (click)="togglePrivacy(a)">
+          <ui-icon [name]="a.privacy === 'public' ? 'globe' : 'lock'" /> {{ a.privacy === 'public' ? 'Público' : 'Privado' }}
+        </button>
+        <button type="button" class="btn btn-sm btn-primary" (click)="exporting.set(a)"><ui-icon name="download" /> Exportar</button>
+      </div>
+    } @else if (assetError()) {
+      <div class="viewport-bg flex-1 grid place-items-center text-center p-6" role="alert">
+        <div class="flex flex-col items-center gap-3"><ui-icon name="circle-alert" [size]="28" class="text-danger" />
+          <p>{{ assetError() }}</p>
+          <a routerLink="/mis-modelos" class="btn btn-secondary">Ir a mis modelos</a></div>
+      </div>
+    } @else if (t && t.status !== 'success') {
+      <div class="viewport-bg flex-1 grid place-items-center text-center p-6">
+        @if (t.status === 'queued' || t.status === 'running') {
+          <div class="flex flex-col items-center gap-3 w-64" role="progressbar" [attr.aria-valuenow]="t.progress | number: '1.0-0'"
+            aria-valuemin="0" aria-valuemax="100" [attr.aria-valuetext]="statusLabel(t)">
+            @if (t.inputPreviewUrl) { <img [src]="t.inputPreviewUrl" alt="" class="w-20 h-20 rounded-md object-cover opacity-60" /> }
+            <span class="text-xl">{{ t.status === 'queued' ? '—' : (t.progress | number: '1.0-0') + ' %' }}</span>
+            <span class="text-sm text-text-muted" aria-live="polite">{{ statusLabel(t) }}</span>
+            <span class="w-full h-1.5 rounded-pill bg-surface-3 overflow-hidden"><span class="block h-full bg-highlight transition-all duration-base" [style.width.%]="t.progress"></span></span>
+            <p class="hint">Puedes cerrar esta página: el modelo aparecerá en Mis modelos.</p>
+            @if (t.status === 'queued') { <button type="button" class="btn btn-sm btn-secondary" (click)="cancel(t)">Cancelar</button> }
+          </div>
+        } @else if (t.status === 'failed') {
+          <div class="flex flex-col items-center gap-3 max-w-sm" role="alert">
+            <ui-icon name="circle-alert" [size]="28" class="text-danger" />
+            <p>{{ t.errorMessage }}</p>
+            <p class="text-sm text-text-muted">Te hemos devuelto los {{ t.creditsCost }} créditos. Prueba con una imagen de fondo liso y el objeto centrado.</p>
+            <button type="button" class="btn btn-secondary" (click)="retry(t)"><ui-icon name="rotate-ccw" /> Reintentar</button>
+          </div>
+        } @else {
+          <p class="text-text-muted">Tarea cancelada. Los créditos se han devuelto.</p>
+        }
+      </div>
+    } @else {
+      <app-viewer class="flex-1" [url]="null">
+        <div class="absolute inset-0 grid place-items-center text-center p-6 pointer-events-none">
+          <div><p class="text-lg">Tu próximo modelo aparecerá aquí</p>
+            <p class="text-sm text-text-muted">Sube una imagen o describe un objeto y pulsa Generar</p></div>
+        </div>
+      </app-viewer>
+    }
+  </section>
+
+  <!-- Actividad (cola + recientes) -->
+  <aside aria-labelledby="activity-title" class="panel lg:w-side shrink-0 flex flex-col lg:overflow-y-auto">
+    <div class="p-4 flex items-center justify-between">
+      <h2 id="activity-title" class="text-sm font-semibold">Actividad</h2>
+      <a routerLink="/mis-modelos" class="text-xs text-text-muted underline">Ver todos</a>
+    </div>
+    @if (!gates.me()) {
+      <p class="px-4 pb-4 text-sm text-text-muted">Entra para ver tu cola y tus modelos.</p>
+    } @else if (!tasks().length) {
+      <p class="px-4 pb-4 text-sm text-text-muted">Aquí verás lo que generes.</p>
+    } @else {
+      <ul class="px-2 pb-2 flex flex-col gap-1">
+        @for (task of tasks(); track task.id) {
+          <li>
+            <button type="button" (click)="openTask(task)" [attr.aria-current]="task.id === selectedTaskId() ? 'true' : null"
+              class="w-full flex items-center gap-3 p-2 rounded-md text-left hover:bg-surface-3"
+              [class.bg-highlight-surface]="task.id === selectedTaskId()">
+              <span class="w-11 h-11 rounded-md bg-surface-3 grid place-items-center overflow-hidden shrink-0">
+                @if (task.inputPreviewUrl) { <img [src]="task.inputPreviewUrl" alt="" class="w-full h-full object-cover" /> }
+                @else { <ui-icon name="type" class="text-text-muted" /> }
+              </span>
+              <span class="flex-1 min-w-0">
+                <span class="block text-sm truncate">{{ task.prompt || taskTitle(task) }}</span>
+                <span class="block text-xs" [class.text-danger]="task.status === 'failed'" [class.text-text-muted]="task.status !== 'failed'">{{ statusLabel(task) }}</span>
+                @if (task.status === 'running') {
+                  <span class="mt-1 block h-1 rounded-pill bg-surface-3"><span class="block h-full rounded-pill bg-highlight" [style.width.%]="task.progress"></span></span>
+                }
+              </span>
+              <span class="text-xs text-text-muted flex items-center gap-0.5"><ui-icon name="zap" [size]="12" />{{ task.creditsCost }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+</div>
+
+<app-export-modal [asset]="exporting()" (closed)="exporting.set(null)" />
