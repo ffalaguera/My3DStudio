@@ -106,6 +106,19 @@ test.describe('F05 mis modelos', () => {
     await expect(page.getByRole('dialog', { name: 'Esto no está en tu plan' })).toContainText('Los modelos privados están en los planes de pago');
   });
 
+  test('BUG-010 abrir el enlace de un modelo sin sesión y entrar: el modelo se carga sin recargar', async ({ page, browser }) => {
+    await page.goto('/');
+    const email = await signIn(page);
+    await makeModel(page, 'un enlace compartido');
+    const url = page.url();
+    const ctx2 = await browser.newContext();
+    const other = await ctx2.newPage();
+    await other.goto(url);
+    await signIn(other, email); // el mismo usuario en otro navegador
+    await expect(other.getByRole('region', { name: 'Resultado' }).getByRole('heading', { name: 'un enlace compartido' })).toBeVisible();
+    await ctx2.close();
+  });
+
   test('F05-N2 modelo de otro usuario: no se ve nada', async ({ page, browser }) => {
     await page.goto('/');
     await signIn(page);

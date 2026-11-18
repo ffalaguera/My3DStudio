@@ -104,11 +104,13 @@ export class Workspace {
         untracked(() => this.select({ modelo: t.assetIds[0], tarea: t.id }));
       }
     });
-    // cargar el asset seleccionado
+    // cargar el asset seleccionado (y volver a cargarlo al entrar o salir: BUG-010)
     effect(() => {
       const id = this.selectedAssetId();
+      const user = this.gates.session();
       this.assetError.set('');
       if (!id) return this.asset.set(null);
+      if (!user) return this.asset.set(null);
       this.api.asset(id).then(
         (a) => this.asset.set(a),
         (e) => {

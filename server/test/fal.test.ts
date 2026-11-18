@@ -93,10 +93,10 @@ describe('FalProvider contra un fal simulado', () => {
     expect(Math.max(...progress)).toBeLessThan(95);
   });
 
-  it('topología limpia con 2 variantes: 2 peticiones con semillas distintas y decimación por polígonos', async () => {
+  it('topología limpia con 2 variantes: 2 peticiones con semillas distintas y decimación = polígonos pedidos', async () => {
     const out = await provider().generate(input({ series: 'smart', params: { ...input().params, faceLimit: 5000, variants: 2 } }), async () => {}, noAbort());
     expect(out.variants).toHaveLength(2);
-    expect(calls.map((c) => c.body['decimation_target'])).toEqual([2500, 2500]);
+    expect(calls.map((c) => c.body['decimation_target'])).toEqual([5000, 5000]);
     expect(new Set(calls.map((c) => c.body['seed'])).size).toBe(2);
   });
 

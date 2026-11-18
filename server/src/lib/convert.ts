@@ -3,7 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { NodeIO, type Document } from '@gltf-transform/core';
+import type { Document } from '@gltf-transform/core';
+import { gltfIO } from './gltf.js';
 import { HttpError } from './http.js';
 
 const run = promisify(execFile);
@@ -43,7 +44,7 @@ function triangles(doc: Document): Tri[] {
 }
 
 export async function stats(glb: Buffer): Promise<{ faces: number; vertices: number }> {
-  const doc = await new NodeIO().readBinary(new Uint8Array(glb));
+  const doc = await gltfIO().readBinary(new Uint8Array(glb));
   let faces = 0, vertices = 0;
   for (const t of triangles(doc)) {
     faces += t.indices.length / 3;
@@ -111,7 +112,7 @@ async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz' |
 export async function convert(glb: Buffer, format: Format, blenderPath?: string): Promise<Buffer> {
   if (format === 'glb') return glb;
   if (format === 'obj' || format === 'stl') {
-    const tris = triangles(await new NodeIO().readBinary(new Uint8Array(glb)));
+    const tris = triangles(await gltfIO().readBinary(new Uint8Array(glb)));
     return format === 'obj' ? toObj(tris) : toStl(tris);
   }
   if (!blenderPath) throw new HttpError(501, 'server_conversion', 'Este formato necesita Blender en el servidor y aún no está activado');

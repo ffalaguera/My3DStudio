@@ -1,4 +1,4 @@
-import { NodeIO } from '@gltf-transform/core';
+import { gltfIO } from '../lib/gltf.js';
 import type { GenerationInput, GenerationOutput, GenerationProvider } from './provider.js';
 import { ProviderError } from './provider.js';
 
@@ -172,8 +172,9 @@ export class FalProvider implements GenerationProvider {
       resolution: smart ? 1024 : 1024,
       texture_size: p.texture ? TEXTURE_SIZE[p.textureResolution] : 1024,
       remesh: true,
-      // decimation_target cuenta vértices; una malla cerrada tiene ~2 caras por vértice
-      decimation_target: smart ? Math.max(500, Math.round(p.faceLimit / 2)) : 500_000,
+      // decimation_target: la documentación de fal dice "vértices", pero medido el 2026-11-18 se comporta como caras
+      // (500.000 → 497.078 caras / 303.001 vértices). Se pasa el número de polígonos tal cual.
+      decimation_target: smart ? Math.max(500, p.faceLimit) : 500_000,
     };
     const n = Math.max(1, p.variants);
     const done = new Array<number>(n).fill(0);
@@ -203,7 +204,7 @@ function hash(s: string): number {
 
 /** "Sin textura": quita imágenes y deja un gris neutro, para mallas que se texturizan después en otra herramienta. */
 export async function stripTextures(glb: Buffer): Promise<Buffer> {
-  const io = new NodeIO();
+  const io = gltfIO();
   const doc = await io.readBinary(new Uint8Array(glb));
   for (const m of doc.getRoot().listMaterials()) {
     m.setBaseColorTexture(null).setMetallicRoughnessTexture(null).setNormalTexture(null)
