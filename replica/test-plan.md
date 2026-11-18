@@ -8,7 +8,7 @@ Todos los e2e fallan si hay errores de consola o respuestas 5xx, y pasan axe (WC
 
 ## F01 Visitante crea su primer modelo desde una imagen
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | F01-H1 | feliz | inicio → elegir imagen → Generar → entrar → esperar → Exportar GLB | arranca la generación sola, progreso, modelo en el visor, descarga GLB válida; créditos 200 → 185 | e2e | pass (tras BUG-007, BUG-008) |
 | F01-E1 | sin sesión | en /crear subir imagen sin haber entrado | se abre el acceso; tras entrar, la imagen se sube | e2e | pass (dentro de F01-H1) |
@@ -24,7 +24,7 @@ Todos los e2e fallan si hay errores de consola o respuestas 5xx, y pasan axe (WC
 
 ## F02 Texto a 3D
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | F02-H1 | feliz | Texto → prompt → Ctrl+Enter | modelo con el nombre del prompt | e2e (solo teclado) | pass |
 | F02-E1 | vacío | Generar sin texto | "Describe el objeto que quieres crear", no se cobra | e2e | pass |
@@ -35,7 +35,7 @@ Todos los e2e fallan si hay errores de consola o respuestas 5xx, y pasan axe (WC
 
 ## F03 Topología limpia para motores de juego
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | F03-N1 | plan Gratis | elegir Topología limpia y Generar | aviso "La topología limpia está en los planes de pago" | e2e | pass (tras BUG-002) |
 | F03-H1 | feliz (Pro) | Pro → Topología limpia, 5.000 polígonos, 2 variantes | 200 créditos, 2 modelos, selector de variantes | e2e (plan cambiado por API de test) | pass |
@@ -43,7 +43,7 @@ Todos los e2e fallan si hay errores de consola o respuestas 5xx, y pasan axe (WC
 
 ## F04 Sin créditos → mejorar plan
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | F04-N1 | sin saldo | saldo 10 → Generar | aviso con la cifra exacta "Te faltan 5 créditos" + Ver planes | e2e | pass |
 | F04-H1 | precios | abrir /precios | 3 planes, mensual/anual cambia los importes | e2e | pass |
@@ -54,7 +54,7 @@ Todos los e2e fallan si hay errores de consola o respuestas 5xx, y pasan axe (WC
 
 ## F05 Gestionar mis modelos
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | F05-H1 | renombrar | renombrar desde el visor | nombre nuevo en visor y lista | e2e | pass |
 | F05-H2 | filtrar y buscar | chips y búsqueda; búsqueda sin resultados | lista filtrada; "Nada coincide" + Quitar filtros | e2e | pass |
@@ -71,7 +71,7 @@ Pantallas *could* no construidas (S07, S09, lote). Sin casos hasta que existan.
 
 ## Transversales
 
-| caso | tipo | pasos | esperado | auto |
+| caso | tipo | pasos | esperado | auto | resultado |
 | --- | --- | --- | --- | --- | --- |
 | X-1 | a11y | axe en S01, S03, S05, S06, S10, S12 y modales | 0 violaciones AA | e2e | pass (tras BUG-003, BUG-004) |
 | X-2 | teclado | recorrer F02 solo con teclado | completable, foco visible | e2e | pass |
