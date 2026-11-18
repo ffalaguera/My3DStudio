@@ -1,0 +1,72 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 800,
+    "height": 600
+  },
+  "clone": {
+    "width": 800,
+    "height": 600
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 360
+  },
+  "height_delta_pct": 0.0,
+  "score": 22.5,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 400,
+      "w": 800,
+      "h": 200,
+      "cells": 24,
+      "where": "bottom centre"
+    },
+    {
+      "x": 133,
+      "y": 133,
+      "w": 666,
+      "h": 266,
+      "cells": 22,
+      "where": "middle centre"
+    },
+    {
+      "x": 333,
+      "y": 0,
+      "w": 200,
+      "h": 66,
+      "cells": 3,
+      "where": "top centre"
+    },
+    {
+      "x": 600,
+      "y": 0,
+      "w": 133,
+      "h": 133,
+      "cells": 3,
+      "where": "top right"
+    },
+    {
+      "x": 133,
+      "y": 66,
+      "w": 66,
+      "h": 200,
+      "cells": 3,
+      "where": "top left"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "w": 133,
+      "h": 66,
+      "cells": 2,
+      "where": "top left"
+    }
+  ],
+  "files": {
+    "original": "screens/S01-home-menu-workspace.png",
+    "clone": "clone-screens/1024/S01-800.png"
+  }
+}

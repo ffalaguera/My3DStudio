@@ -1,0 +1,40 @@
+{
+  "mode": "layout",
+  "original": {
+    "width": 800,
+    "height": 600
+  },
+  "clone": {
+    "width": 800,
+    "height": 600
+  },
+  "compared_at": {
+    "width": 480,
+    "height": 360
+  },
+  "height_delta_pct": 0.0,
+  "score": 15.0,
+  "verdict": "different",
+  "regions": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 800,
+      "h": 266,
+      "cells": 26,
+      "where": "top centre"
+    },
+    {
+      "x": 400,
+      "y": 333,
+      "w": 200,
+      "h": 133,
+      "cells": 4,
+      "where": "bottom centre"
+    }
+  ],
+  "files": {
+    "original": "screens/S06-assets-vacio.png",
+    "clone": "clone-screens/1024/S06-800.png"
+  }
+}
