@@ -1,22 +1,22 @@
 feature,area,priority,original,clone,notes
-Registro e inicio de sesión con email y Google,cuenta,must,yes,partial,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth)
-Créditos gratis al registrarse,cuenta,must,yes,yes,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa
+Registro e inicio de sesión con email y Google,cuenta,must,yes,partial,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth) | backend: Supabase Auth (enlace mágico + Google) integrado; falta crear el proyecto y las claves
+Créditos gratis al registrarse,cuenta,must,yes,yes,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa | backend: en el primer acceso
 Subir imagen JPG/PNG/WEBP de hasta 20 MB,generación,must,yes,yes,S03; mínimo recomendado 512x512 | clon: clic / arrastrar / pegar; valida tipo / tamaño / mínimo 256 px
 Imagen a 3D,generación,must,yes,partial,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real
 Texto a 3D,generación,must,yes,partial,F02 | clon: flujo completo con proveedor falso; falta el motor real
 Elegir modo alta calidad o topología limpia,generación,must,yes,yes,HD (~2M polígonos y minutos) frente a Smart Mesh (500-25K polígonos y 10-40 s) | clon: S01 y S03
 Coste en créditos visible antes de generar,créditos,must,yes,yes,"botón ""Generar ⚡ 55"" | clon: botón Generar con coste; POST /tasks/estimate"
-Cola de tareas asíncrona con progreso,generación,must,yes,yes,queued/running/success/failed/cancelled y progreso 0-100 | clon: API falsa: cola / progreso / posición; SSE real en backend
-Congelar créditos y devolverlos si la tarea falla,créditos,must,yes,yes,modelo congelar-y-deducir de la API pública | clon: API falsa con las reglas del esquema; probado fallo y cancelación
+Cola de tareas asíncrona con progreso,generación,must,yes,yes,queued/running/success/failed/cancelled y progreso 0-100 | clon: API falsa: cola / progreso / posición; SSE real en backend | backend: cola en Postgres + pg-boss + SSE
+Congelar créditos y devolverlos si la tarea falla,créditos,must,yes,yes,modelo congelar-y-deducir de la API pública | clon: API falsa con las reglas del esquema; probado fallo y cancelación | backend: probado con tests (fallo / cancelación / atasco / concurrencia)
 Visor 3D con órbita y zoom,visor,must,yes,yes,S05/S07; three.js o model-viewer | clon: three.js; luces / malla / suelo / captura / teclado
 Exportar GLB,exportación,must,yes,yes,formato nativo para web y AR
-Exportar FBX y OBJ,exportación,must,yes,partial,conversión en servidor | clon: OBJ sí; FBX necesita conversión en servidor (Blender)
+Exportar FBX y OBJ,exportación,must,yes,partial,conversión en servidor | clon: OBJ sí; FBX necesita conversión en servidor (Blender) | backend: OBJ en servidor; FBX con Blender (BLENDER_PATH)
 Exportar STL para impresión 3D,exportación,must,yes,yes,caso de uso destacado en la web
 Biblioteca Mis assets,assets,must,yes,yes,S06; con estado vacío | clon: S06 con miniaturas / búsqueda / estados vacío y cargando
 Borrar un modelo,assets,must,yes,yes,clon: con confirmación
 Privacidad pública o privada por modelo,assets,must,yes,yes,privado solo en planes de pago | clon: privado bloqueado en Gratis
-Planes de suscripción mensual y anual,pagos,must,yes,partial,Free / Pro / Max / Team; anual con descuento | clon: S10 hecho; pago simulado hasta Stripe
-Saldo de créditos con reinicio mensual,créditos,must,yes,partial,los créditos mensuales caducan al final del ciclo | clon: saldo y caducidad al cambiar plan; falta el trabajo mensual del backend
+Planes de suscripción mensual y anual,pagos,must,yes,partial,Free / Pro / Max / Team; anual con descuento | clon: S10 hecho; pago simulado hasta Stripe | backend: Checkout + Portal + webhooks probados con eventos firmados; falta probar con tus claves test
+Saldo de créditos con reinicio mensual,créditos,must,yes,yes,los créditos mensuales caducan al final del ciclo | clon: saldo y caducidad al cambiar plan; falta el trabajo mensual del backend | backend: invoice.paid (pago) y cron día 1 UTC (gratis)
 Aviso de créditos insuficientes con paso a mejorar plan,pagos,must,yes,yes,S13 (inferido) | clon: S13 con cifra exacta
 Límites por plan (concurrencia / exportaciones / historial),pagos,must,yes,yes,Free: 1 tarea a la vez y exportaciones limitadas | clon: también modelos guardados y resolución de textura
 Multivista a 3D con 2-4 imágenes,generación,should,yes,no,mejora la parte trasera del modelo
@@ -27,11 +27,11 @@ Control de número de polígonos,generación,should,yes,yes,deslizador 500-25000
 Prompt de textura separado,generación,should,yes,partial,si se deja vacío se usa el prompt principal | clon: UI hecha; el proveedor falso lo ignora
 Varias variantes por generación (1/2/4),generación,should,yes,yes,Smart Mesh | clon: selector de variantes en el visor
 Packs de créditos que no caducan,pagos,should,yes,no,$10 = 1000 créditos con bonus en packs grandes | clon: la bolsa permanente existe en la API falsa; falta la compra
-Reintentar generación,generación,should,yes,partial,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no
+Reintentar generación,generación,should,yes,yes,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no | backend: reintentos gratis por plan
 Filtros en Mis assets (texturizado / sin textura / rig),assets,should,yes,yes,S06 | clon: sin filtro de rig (no hay rig todavía)
-Exportar USDZ y 3MF,exportación,should,yes,partial,USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor
+Exportar USDZ y 3MF,exportación,should,yes,partial,USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor | backend: con Blender (BLENDER_PATH)
 Opciones de exportación (incluir texturas),exportación,should,yes,no,S08
-Historial de uso de créditos,créditos,should,yes,yes,inferido de la API de historial de uso | clon: S12
+Historial de uso de créditos,créditos,should,yes,yes,inferido de la API de historial de uso | clon: S12 | backend: credit_ledger
 Licencia según plan (atribución en Free y comercial en pago),legal,should,yes,partial,definir en tus propios términos | clon: campo license por modelo; faltan los términos
 Generación por lotes de hasta 10-30 imágenes,generación,could,yes,no,F07
 Retopología,post-procesado,could,yes,no,

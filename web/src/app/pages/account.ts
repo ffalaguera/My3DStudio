@@ -24,7 +24,11 @@ const REASON: Record<LedgerEntry['reason'], string> = {
       @if (gates.me(); as me) {
         <section class="card p-6 grid sm:grid-cols-3 gap-6" aria-label="Plan y créditos">
           <div><p class="hint">Plan</p><p class="text-lg">{{ me.plan.name }}</p>
-            <a routerLink="/precios" class="text-sm underline text-text-muted">Cambiar plan</a></div>
+            @if (me.plan.priceMonthCents > 0 && billing() === 'stripe') {
+              <button type="button" class="text-sm underline text-text-muted" (click)="portal()">Gestionar o cancelar suscripción</button>
+            } @else {
+              <a routerLink="/precios" class="text-sm underline text-text-muted">Cambiar plan</a>
+            }</div>
           <div><p class="hint">Créditos disponibles</p><p class="text-lg flex items-center gap-1"><ui-icon name="zap" />{{ me.credits.available | number: '1.0-0' : 'es' }}</p>
             <p class="hint">{{ me.credits.monthly | number: '1.0-0' : 'es' }} del mes · {{ me.credits.permanent | number: '1.0-0' : 'es' }} sin caducidad</p></div>
           <div><p class="hint">Reservados en tareas</p><p class="text-lg">{{ me.credits.frozen | number: '1.0-0' : 'es' }}</p>
@@ -94,12 +98,25 @@ export class Account {
   protected readonly ledger = signal<LedgerEntry[] | null>(null);
   protected readonly confirmDelete = signal(false);
   protected readonly typed = signal('');
+  protected readonly billing = signal<'simulated' | 'stripe' | 'off'>('off');
 
   constructor() {
+    void this.api.capabilities().then((c) => this.billing.set(c.billing));
+    if (new URLSearchParams(location.search).get('pago') === 'ok') {
+      this.toasts.show('success', 'Pago recibido. Tu plan se activa en unos segundos');
+    }
     effect(() => {
       const me = this.gates.me();
       if (me) void this.api.ledger().then((l) => this.ledger.set(l));
     });
+  }
+
+  protected async portal(): Promise<void> {
+    try {
+      await this.api.billingPortal();
+    } catch {
+      this.toasts.show('error', 'No se ha podido abrir la gestión de la suscripción');
+    }
   }
 
   protected async signOut(): Promise<void> {

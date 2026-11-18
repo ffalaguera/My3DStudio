@@ -96,7 +96,14 @@ export class Pricing {
   protected async choose(p: PlanLimits): Promise<void> {
     if (!(await this.gates.ensureSignedIn())) return;
     this.error.set('');
-    this.buying.set(p);
+    const { billing } = await this.api.capabilities();
+    if (billing === 'simulated') return this.buying.set(p); // demo: confirmación sin cobro
+    if (billing === 'off') return this.toasts.show('info', 'Los pagos se activan pronto. De momento puedes usar el plan Gratis');
+    try {
+      await this.api.checkout(p.id, this.interval()); // redirige a Stripe Checkout
+    } catch (e) {
+      this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido abrir el pago');
+    }
   }
 
   protected async confirm(): Promise<void> {

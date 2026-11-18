@@ -1,0 +1,5 @@
+{
+  "api": "http",
+  "apiUrl": "http://localhost:8787",
+  "auth": "local"
+}

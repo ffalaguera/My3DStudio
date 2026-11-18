@@ -5,7 +5,7 @@ import { Api, ApiError, Asset, ExportFormat } from '../../data/api';
 import { Gates } from '../../shell/gates';
 import { Toasts } from '../../ui/toast';
 
-interface FormatOption { id: ExportFormat; label: string; use: string; ready: boolean }
+interface FormatOption { id: ExportFormat; label: string; use: string }
 
 /** S08: exportar un modelo. FBX y 3MF se convierten en el servidor (trabajo convert). */
 @Component({
@@ -24,12 +24,12 @@ interface FormatOption { id: ExportFormat; label: string; use: string; ready: bo
         @for (f of formats; track f.id) {
           <label class="flex items-center gap-3 p-3 rounded-md border cursor-pointer"
             [class.border-highlight]="format() === f.id" [class.bg-highlight-surface]="format() === f.id"
-            [class.border-border]="format() !== f.id" [class.opacity-50]="!f.ready" [class.cursor-not-allowed]="!f.ready">
+            [class.border-border]="format() !== f.id" [class.opacity-50]="!ready(f.id)" [class.cursor-not-allowed]="!ready(f.id)">
             <input type="radio" name="format" class="sr-only" [value]="f.id" [checked]="format() === f.id"
-              [disabled]="!f.ready" (change)="format.set(f.id)" />
+              [disabled]="!ready(f.id)" (change)="format.set(f.id)" />
             <span class="w-14 font-semibold text-sm uppercase">{{ f.label }}</span>
             <span class="text-sm text-text-muted flex-1">{{ f.use }}</span>
-            @if (!f.ready) { <span class="badge">Con el backend</span> }
+            @if (!ready(f.id)) { <span class="badge">Próximamente</span> }
             @if (format() === f.id) { <ui-icon name="check" /> }
           </label>
         }
@@ -54,13 +54,22 @@ export class ExportModal {
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly formats: FormatOption[] = [
-    { id: 'glb', label: 'GLB', use: 'Web, AR y la mayoría de motores', ready: true },
-    { id: 'obj', label: 'OBJ', use: 'Formato general para editores 3D', ready: true },
-    { id: 'stl', label: 'STL', use: 'Impresión 3D (solo geometría)', ready: true },
-    { id: 'usdz', label: 'USDZ', use: 'Realidad aumentada en dispositivos Apple', ready: true },
-    { id: 'fbx', label: 'FBX', use: 'Unity, Unreal, Blender, Maya', ready: false },
-    { id: '3mf', label: '3MF', use: 'Impresión 3D con color', ready: false },
+    { id: 'glb', label: 'GLB', use: 'Web, AR y la mayoría de motores' },
+    { id: 'obj', label: 'OBJ', use: 'Formato general para editores 3D' },
+    { id: 'stl', label: 'STL', use: 'Impresión 3D (solo geometría)' },
+    { id: 'usdz', label: 'USDZ', use: 'Realidad aumentada en dispositivos Apple' },
+    { id: 'fbx', label: 'FBX', use: 'Unity, Unreal, Blender, Maya' },
+    { id: '3mf', label: '3MF', use: 'Impresión 3D con color' },
   ];
+  private readonly available = signal<ExportFormat[]>(['glb']);
+
+  constructor() {
+    void this.api.capabilities().then((c) => this.available.set(c.exportFormats));
+  }
+
+  protected ready(f: ExportFormat): boolean {
+    return this.available().includes(f);
+  }
 
   protected async download(): Promise<void> {
     const a = this.asset();

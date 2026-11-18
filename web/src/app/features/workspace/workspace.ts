@@ -95,7 +95,7 @@ export class Workspace {
     // estimación de coste cuando cambia el formulario
     effect(() => {
       const req = this.request();
-      void this.api.estimate(req).then((e) => this.estimate.set(e));
+      this.api.estimate(req).then((e) => this.estimate.set(e), () => this.estimate.set(null));
     });
     // al terminar la tarea seleccionada, abrir su primer modelo
     effect(() => {

@@ -1,0 +1,8 @@
+{
+  "_ayuda": "Copia a config.json. api: fake (demo sin servidor) | http. auth: local (solo desarrollo) | supabase. Solo valores públicos.",
+  "api": "http",
+  "apiUrl": "https://api.tudominio.com",
+  "auth": "supabase",
+  "supabaseUrl": "https://TU-PROYECTO.supabase.co",
+  "supabaseAnonKey": "clave-anon-publica"
+}

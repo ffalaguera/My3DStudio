@@ -147,9 +147,18 @@ export class ApiError extends Error {
   }
 }
 
+export interface Capabilities {
+  exportFormats: ExportFormat[];
+  /** simulated = FakeApi; stripe = Checkout real; off = el servidor aún no tiene Stripe configurado */
+  billing: 'simulated' | 'stripe' | 'off';
+}
+
 export abstract class Api {
+  abstract capabilities(): Promise<Capabilities>;
+
   // Sesión (Supabase Auth en el backend real)
   abstract session(): Observable<Profile | null>;
+  /** Con enlace por email puede lanzar ApiError('check_email'): el acceso termina al abrir el enlace. */
   abstract signIn(method: 'google' | 'email', email?: string): Promise<Profile>;
   abstract signOut(): Promise<void>;
 
@@ -178,5 +187,7 @@ export abstract class Api {
 
   // /billing (Stripe Checkout en el real)
   abstract checkout(planId: string, interval: 'month' | 'year'): Promise<void>;
+  /** Customer Portal de Stripe: cambiar tarjeta, plan o cancelar en un clic. */
+  abstract billingPortal(): Promise<void>;
   abstract deleteAccount(): Promise<void>;
 }

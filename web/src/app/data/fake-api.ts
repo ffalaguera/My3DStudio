@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, distinctUntilChanged, filter, map } from 'rxjs';
 import {
-  Api, ApiError, Asset, AssetFilter, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
+  Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
   PlanLimits, Privacy, Profile, Task, Upload,
 } from './api';
 import type { ModelSpec } from './fake-model';
@@ -135,6 +135,14 @@ export class FakeApi extends Api implements OnDestroy {
   }
   private ledgerAdd(s: State, e: Omit<LedgerEntry, 'id' | 'createdAt'>): void {
     s.ledger.unshift({ ...e, id: id(), createdAt: now() });
+  }
+
+  async capabilities(): Promise<Capabilities> {
+    return { exportFormats: ['glb', 'obj', 'stl', 'usdz'], billing: 'simulated' };
+  }
+
+  async billingPortal(): Promise<void> {
+    throw new ApiError(501, 'billing_disabled', 'En la versión de demostración el plan se cambia desde Precios');
   }
 
   // ------------------------------------------------------------------ sesión

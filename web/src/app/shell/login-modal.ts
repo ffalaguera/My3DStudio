@@ -26,6 +26,7 @@ import { Toasts } from '../ui/toast';
             [(ngModel)]="email" [attr.aria-invalid]="!!error()" aria-describedby="login-error" />
         </label>
         @if (error()) { <p id="login-error" class="error-text" role="alert">{{ error() }}</p> }
+        @if (info()) { <p class="text-sm text-success" role="status">{{ info() }}</p> }
         <button type="submit" class="btn btn-primary w-full" [disabled]="busy()" [attr.aria-busy]="busy()">
           @if (busy()) { <ui-icon name="loader-circle" class="animate-spin" /> Entrando… } @else { Recibir enlace de acceso }
         </button>
@@ -41,16 +42,20 @@ export class LoginModal {
   protected email = '';
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+  protected readonly info = signal('');
 
   protected async go(method: 'google' | 'email'): Promise<void> {
     this.busy.set(true);
     this.error.set('');
+    this.info.set('');
     try {
       await this.api.signIn(method, this.email);
       this.gates.loginFinished(true);
       this.toasts.show('success', 'Ya has entrado');
     } catch (e) {
-      this.error.set(e instanceof ApiError ? e.message : 'No se ha podido entrar. Inténtalo de nuevo');
+      // enlace mágico enviado o redirección a Google: no es un error
+      if (e instanceof ApiError && (e.code === 'check_email' || e.code === 'redirecting')) this.info.set(e.message);
+      else this.error.set(e instanceof ApiError ? e.message : 'No se ha podido entrar. Inténtalo de nuevo');
     } finally {
       this.busy.set(false);
     }
