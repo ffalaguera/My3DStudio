@@ -62,7 +62,12 @@ export class FalProvider implements GenerationProvider {
       if (signal?.aborted) throw new ProviderError('cancelada');
       throw new ProviderError('No hay conexión con el motor 3D', true);
     }
-    if (r.status === 401 || r.status === 403) throw new ProviderError('El motor 3D rechaza la clave (FAL_KEY)');
+    if (r.status === 401 || r.status === 403) {
+      // problema de la cuenta de fal (clave o saldo): el detalle es para quien opera la app, no para el usuario
+      const detail = await r.text().catch(() => '');
+      console.error(`[fal] ${r.status}: ${r.status === 401 ? 'clave rechazada: revisa FAL_KEY' : 'cuenta bloqueada o sin saldo: revisa fal.ai/dashboard/billing'} · ${detail.slice(0, 200)}`);
+      throw new ProviderError('El motor 3D no está disponible ahora mismo. Te hemos devuelto los créditos');
+    }
     if (r.status === 429 || r.status >= 500) throw new ProviderError('El motor 3D está saturado. Te hemos devuelto los créditos', true);
     return r;
   }

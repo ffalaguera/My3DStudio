@@ -128,9 +128,27 @@ describe('FalProvider contra un fal simulado', () => {
     await expect(provider().generate(input(), async () => {}, noAbort())).rejects.toThrow('archivo no válido');
   });
 
-  it('clave rechazada: mensaje claro', async () => {
-    const p = new FalProvider({ key: 'k', baseUrl: base, pollMs: 5, fetch: async () => new Response('{}', { status: 401 }) });
-    await expect(p.generate(input(), async () => {}, noAbort())).rejects.toThrow('FAL_KEY');
+  it('clave rechazada (401) o cuenta sin saldo (403): el usuario ve un mensaje genérico y el detalle va al log', async () => {
+    const logged: string[] = [];
+    const orig = console.error;
+    console.error = (...a: unknown[]) => void logged.push(a.join(' '));
+    try {
+      for (const [status, detail, hint] of [
+        [401, 'invalid key credentials', /FAL_KEY/],
+        [403, 'User is locked. Reason: Exhausted balance. Top up your balance at fal.ai/dashboard/billing.', /saldo/],
+      ] as const) {
+        logged.length = 0;
+        const p = new FalProvider({ key: 'k', baseUrl: base, pollMs: 5,
+          fetch: async () => new Response(JSON.stringify({ detail }), { status }) });
+        const e = await p.generate(input(), async () => {}, noAbort()).catch((x) => x);
+        expect(e).toBeInstanceOf(ProviderError);
+        expect(e.message).toBe('El motor 3D no está disponible ahora mismo. Te hemos devuelto los créditos');
+        expect(e.message).not.toMatch(/FAL_KEY|saldo|balance/);
+        expect(logged.join('\n')).toMatch(hint); // quien opera la app sí ve qué pasa
+      }
+    } finally {
+      console.error = orig;
+    }
   });
 
   it('cancelar: aborta y pide la cancelación a fal', async () => {
