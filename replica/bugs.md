@@ -1,7 +1,7 @@
 # Bugs: clon de Tripo Studio
 
 Build probado: ea601da → arreglos en d03383f. Fecha: 2026-11-18. Navegador: Edge (Playwright), 1440 px y 390 px.
-Solo bugs reproducidos. Abiertos: **0**. Por severidad: S1 1 · S2 3 · S3 3 · S4 1 (todos arreglados, con test).
+Solo bugs reproducidos. Abiertos: **0**. Por severidad: S1 1 · S2 4 · S3 4 · S4 1 (todos arreglados, con test).
 
 ### BUG-006: doble clic en Generar crea dos tareas y cobra dos veces
 
@@ -133,6 +133,42 @@ Expected: contraste AA.
 Actual: axe `color-contrast` en el texto del coste (opacidad 0,8 sobre el botón).
 Evidence: e2e `X-1`.
 Status: fixed in d03383f (sin opacidad; se diferencia por peso de letra)
+
+### BUG-009: los modelos reales de fal fallaban al guardarse (EXT_texture_webp)
+
+- Severity: S2 (con el motor real, ninguna generación con textura llegaba al usuario; fal la cobraba igual)
+- Flow / case: F01 / prueba real con fal
+- Build: 45b5271
+
+Steps
+1. `GENERATION_PROVIDER=fal`, generar desde una imagen.
+
+Expected: el modelo se guarda.
+Actual: al 90 % "Ha fallado la generación"; log: `Missing required extension, "EXT_texture_webp"`.
+Evidence: test `BUG-009 GLB con EXT_texture_webp` (rojo antes del arreglo).
+Suspected cause: el servidor leía los GLB sin registrar extensiones de glTF; el fal simulado de los tests devolvía GLB sin texturas.
+Status: fixed in 145aced (lector de glTF compartido con todas las extensiones: `server/src/lib/gltf.ts`)
+
+### BUG-010: al abrir el enlace de un modelo sin sesión y entrar, seguía diciendo "Inicia sesión"
+
+- Severity: S3 (se arreglaba recargando)
+- Flow / case: F05
+- Screen: S05
+
+Steps
+1. Sin sesión, abrir `/crear?modelo=<id propio>`.
+2. Entrar.
+
+Expected: el modelo se carga.
+Actual: "Inicia sesión para continuar" hasta recargar la página.
+Evidence: e2e `BUG-010 abrir el enlace de un modelo sin sesión y entrar` (rojo sin el arreglo, verde con él).
+Status: fixed in 145aced (la carga del modelo se repite al cambiar la sesión)
+
+## También corregido en las pruebas reales con fal
+
+- Clave rechazada (401) y cuenta sin saldo (403) se mostraban al usuario como "rechaza la clave (FAL_KEY)". Ahora el
+  usuario ve un mensaje genérico y el log dice cuál de los dos es (45b5271).
+- "Topología limpia" pedía la mitad de polígonos: `decimation_target` cuenta caras, no vértices (145aced).
 
 ## También corregido (menor, sin número)
 
