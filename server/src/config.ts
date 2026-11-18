@@ -38,8 +38,10 @@ const schema = z
     EMAIL_FROM: z.string().default('Forma <hola@example.com>'),
 
     // Motor 3D y conversión
-    GENERATION_PROVIDER: z.enum(['fake', 'fal']).default('fake'),
+    GENERATION_PROVIDER: z.enum(['fake', 'fal', 'modal']).default('fake'),
     FAL_KEY: z.string().optional(),
+    MODAL_TRELLIS_URL: z.string().url().optional(),
+    MODAL_SERVICE_TOKEN: z.string().min(32).optional(),
     FAL_BASE_URL: z.string().url().optional(),
     // Coste en créditos (PROVISIONAL, se fija en /replica-launch). Con fal cada modelo cuesta ~$0,30: ver backend.md
     CREDITS_HD: z.coerce.number().int().positive().default(15),
@@ -61,6 +63,8 @@ const schema = z
       'R2_BUCKET', 'faltan variables R2_*');
     need(c.NODE_ENV === 'production' && c.STORAGE_DRIVER === 'local', 'STORAGE_DRIVER', 'usa r2 en producción');
     need(c.GENERATION_PROVIDER === 'fal' && !c.FAL_KEY, 'FAL_KEY', 'hace falta con GENERATION_PROVIDER=fal');
+    need(c.GENERATION_PROVIDER === 'modal' && !(c.MODAL_TRELLIS_URL && c.MODAL_SERVICE_TOKEN), 'MODAL_TRELLIS_URL',
+      'hacen falta MODAL_TRELLIS_URL y MODAL_SERVICE_TOKEN (32+ caracteres) con GENERATION_PROVIDER=modal');
     need(c.NODE_ENV === 'production' && c.GENERATION_PROVIDER === 'fake', 'GENERATION_PROVIDER', 'el motor falso no se usa en producción');
     need(c.EMAIL_DRIVER === 'resend' && !c.RESEND_API_KEY, 'RESEND_API_KEY', 'hace falta con EMAIL_DRIVER=resend');
     need(!!c.STRIPE_SECRET_KEY !== !!c.STRIPE_WEBHOOK_SECRET, 'STRIPE_WEBHOOK_SECRET', 'STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET van juntas');
@@ -71,7 +75,9 @@ const schema = z
 export type Config = z.infer<typeof schema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const r = schema.safeParse(env);
+  // `VAR=` vacía (como en .env.example) cuenta como no definida
+  const clean = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== undefined && v.trim() !== ''));
+  const r = schema.safeParse(clean);
   if (!r.success) {
     const lines = r.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Configuración inválida:\n${lines}`);

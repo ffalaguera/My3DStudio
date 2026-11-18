@@ -43,7 +43,75 @@ Claude no crea cuentas ni escribe claves. Cuando las tengas, ponlas en `server/.
 Los ámbitos básicos de Google (`openid email profile`) no necesitan la verificación larga de ámbitos sensibles, pero
 la pantalla de consentimiento con tu logo y nombre sí pasa una verificación de marca (días). Empiézala pronto.
 
-## Motor 3D (decidido el 2026-11-18): TRELLIS.2 en fal.ai ahora, en Modal propio después
+## Motor 3D: TRELLIS.2 propio en Modal (elegido el 2026-11-18; fal.ai queda como alternativa)
+
+**Servicio** `gpu/trellis_service.py`, desplegado en **tu** cuenta de Modal:
+- TRELLIS.2 desde el fork [maksonlee/TRELLIS.2](https://github.com/maksonlee/TRELLIS.2) fijado al commit `0c33787`
+  (2026-11-05). Usa **BiRefNet** (MIT) en vez de RMBG-2.0 y **cuBVH** (MIT) en vez de nvdiffrast para hornear las
+  texturas. **Cada generación pasa la auditoría de licencias** del fork: si se cargara nvdiffrast o nvdiffrec, el trabajo
+  falla. La imagen tampoco se construye si nvdiffrast está instalado.
+- FLUX.1 [schnell] (Apache 2.0) en el mismo servicio para texto → imagen de referencia.
+  **Sin filtro de contenido** (fal lo traía): queda pendiente la moderación de prompts antes de congelar créditos.
+- CuMesh, FlexGEMM, utils3d y flash-attn también van fijados a versiones concretas.
+- API propia con token (`SERVICE_TOKEN`): crear trabajo, estado y progreso, descargar archivos y cancelar.
+- Los pesos se guardan en un volumen de Modal: se descargan una vez, no en cada arranque.
+- GPU por defecto **L40S** (48 GB; TRELLIS.2 pide ≥ 24 GB). `FORMA_MAX_CONTAINERS=2` limita el gasto simultáneo.
+
+**Adaptador** `modal` en el servidor (`src/provider/modal.ts`), con `GENERATION_PROVIDER=modal`. Probado con un Modal
+simulado (7 tests). **El servicio de GPU no se ha ejecutado todavía**: hace falta tu cuenta. El primer despliegue puede
+necesitar algún ajuste (versiones de paquetes, nombres de módulos de CuMesh/FlexGEMM); si `modal deploy` falla, pásame
+el error.
+
+### Desplegar (una vez, ~15–30 min la primera construcción)
+
+1. Crea una cuenta en [modal.com](https://modal.com) (plan Starter: $30 de crédito al mes, sin tarjeta).
+2. En Hugging Face, entra en [facebook/dinov3-vitl16-pretrain-lvd1689m](https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m),
+   **acepta la licencia de DINOv3** y crea un token de lectura (Settings → Access Tokens).
+3. En una terminal:
+
+```bash
+pip install modal
+```
+
+```bash
+python -m modal setup
+```
+
+4. Crea el secreto con tu token de Hugging Face y el `MODAL_SERVICE_TOKEN` que ya está en `server/.env.local`
+   (cópialo de ahí):
+
+```bash
+modal secret create forma-trellis HF_TOKEN=hf_TU_TOKEN SERVICE_TOKEN=EL_DE_ENV_LOCAL
+```
+
+5. Despliega desde `clon-tripo`:
+
+```bash
+modal deploy gpu/trellis_service.py
+```
+
+6. Copia la URL de la función `api` (termina en `-api.modal.run`) a `MODAL_TRELLIS_URL` en `server/.env.local` y pon
+   `GENERATION_PROVIDER=modal`. La API se reinicia sola.
+
+La primera generación tarda más (arranque en frío: descarga ~20 GB de pesos al volumen). Las siguientes, si el
+contenedor sigue caliente (5 min), van directas.
+
+### Costes estimados en Modal
+
+| | estimación | nota |
+| --- | --- | --- |
+| L40S | ≈ $0,00054/s ([Modal](https://modal.com/pricing), confirmar) | |
+| un modelo alto detalle 1024³ | ≈ 40–70 s de GPU → **≈ $0,02–0,04** | sin medir: H100 hace la generación en ~17 s y el horneado ~12 s |
+| texto a 3D | + ≈ 5–10 s de FLUX | |
+| arranque en frío | ≈ 1–3 min de GPU por arranque (carga de pesos) → ≈ $0,03–0,10 | ocurre cuando no ha habido uso en 5 min |
+| **$30 gratis al mes** | ≈ **500–900 modelos**, según arranques en frío | |
+
+Con estos números, 15 créditos por modelo empiezan a ser viables (Pro: 200 modelos ≈ $5–8). Se confirma midiendo en
+cuanto esté desplegado.
+
+---
+
+### Alternativa: fal.ai (pago por llamada)
 
 - **Adaptador `fal`** (`src/provider/fal.ts`), activado con `GENERATION_PROVIDER=fal` y `FAL_KEY`:
   - Imagen a 3D → `fal-ai/trellis-2`. La imagen va como data URI: no hace falta que el almacén sea público.
@@ -62,7 +130,7 @@ la pantalla de consentimiento con tu logo y nombre sí pasa una verificación de
   **Sin probar con fal real**: hace falta tu `FAL_KEY`.
 - **Después (Modal)**: un adaptador propio con TRELLIS.2 en GPU serverless, misma interfaz, cuando el volumen compense.
 
-### Costes: con fal y los créditos actuales se pierde dinero
+#### Costes con fal: con los créditos actuales se pierde dinero
 
 | | por modelo | Pro (3.000 créditos, 13–19 €/mes) a 15 créditos = 200 modelos |
 | --- | --- | --- |
@@ -78,18 +146,22 @@ Fuentes de precios: [fal TRELLIS.2](https://fal.ai/models/fal-ai/trellis-2) (la 
 [su guía](https://fal.ai/learn/devs/trellis-2-image-to-3d-prompt-guide)), [Modal](https://www.spheron.network/blog/modal-gpu-pricing-2026-per-second-billing/)
 (tercero; confirmar en modal.com/pricing).
 
-### Licencias para revisión legal
+### Licencias para revisión legal (motor)
 
 No es asesoramiento legal. Comprobado el 2026-11-18; las páginas pueden cambiar.
 
 | componente | licencia | ¿se usa? | fuente |
 | --- | --- | --- | --- |
 | TRELLIS.2 (código y pesos 4B) | **MIT** | sí, vía fal | [Hugging Face](https://huggingface.co/microsoft/TRELLIS.2-4B), [GitHub](https://github.com/microsoft/TRELLIS.2) |
-| nvdiffrast (horneado de texturas al exportar GLB) | NVIDIA Source Code License "1-Way Commercial": **solo no comercial** | dentro del pipeline de fal (no sabemos si lo han sustituido) | [issue #22 de TRELLIS.2](https://github.com/microsoft/TRELLIS.2/issues/22), [texto de la licencia](https://huggingface.co/spaces/ginipick/SORA-3D/blob/e3df509037b8d7a49ea8599caebb1c08922cea96/extensions/nvdiffrast/LICENSE.txt) |
+| nvdiffrast (horneado de texturas al exportar GLB) | NVIDIA Source Code License "1-Way Commercial": **solo no comercial** | **no** en Modal (sustituido por cuBVH, auditado); quizá dentro de fal | [issue #22 de TRELLIS.2](https://github.com/microsoft/TRELLIS.2/issues/22), [texto de la licencia](https://huggingface.co/spaces/ginipick/SORA-3D/blob/e3df509037b8d7a49ea8599caebb1c08922cea96/extensions/nvdiffrast/LICENSE.txt) |
 | nvdiffrec | igual que nvdiffrast | solo visualización; no hace falta | issue #22 |
 | DINOv3 (codificador de imagen, obligatorio) | Licencia propia de Meta; permite uso comercial | sí, vía fal | [Meta](https://ai.meta.com/resources/models-and-libraries/dinov3-license) |
-| RMBG-2.0 (quitar fondo en el pipeline oficial) | CC BY-NC 4.0 / licencia comercial de Bria: **no comercial** sin acuerdo | posiblemente dentro de fal | [Hugging Face](https://huggingface.co/briaai/RMBG-2.0) |
-| FLUX.1 [schnell] | Apache 2.0 (confirmar en su ficha) | sí, vía fal (texto a 3D) | [fal](https://fal.ai/models/fal-ai/flux/schnell/api) |
+| RMBG-2.0 (quitar fondo en el pipeline oficial) | CC BY-NC 4.0 / licencia comercial de Bria: **no comercial** sin acuerdo | **no** en Modal (sustituido por BiRefNet); posiblemente dentro de fal |
+| BiRefNet (`ZhengPeng7/BiRefNet@e2bf8e4`) | MIT (según el fork; confirmar en su ficha) | sí, en Modal | [Hugging Face](https://huggingface.co/ZhengPeng7/BiRefNet) |
+| CuMesh (cuBVH, xatlas), FlexGEMM, o-voxel, utils3d | MIT (según el fork) | sí, en Modal | [tools/README del fork](https://github.com/maksonlee/TRELLIS.2/tree/main/tools) |
+| fork maksonlee/TRELLIS.2 (`tools/`) | mismo repositorio MIT; código de un tercero | sí, en Modal (fijado a `0c33787`) | revisar el código antes de producción |
+| FlashAttention | BSD-3-Clause | sí, en Modal | | [Hugging Face](https://huggingface.co/briaai/RMBG-2.0) |
+| FLUX.1 [schnell] | Apache 2.0 (confirmar en su ficha) | sí, en Modal (y en fal) (texto a 3D) | [fal](https://fal.ai/models/fal-ai/flux/schnell/api) |
 | Hunyuan3D 2.x | Licencia de Tencent: **excluye la UE, el Reino Unido y Corea del Sur** | **no** | [LICENSE](https://huggingface.co/tencent/Hunyuan3D-2.1/blob/main/LICENSE) |
 | Tripo API | sus términos prohíben usar las salidas para competir | **no** | tripo3d.ai/terms |
 

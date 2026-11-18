@@ -6,6 +6,7 @@ import { renewMonthly, settle } from '../lib/credits.js';
 import { stats } from '../lib/convert.js';
 import { FakeProvider } from '../provider/fake.js';
 import { FalProvider } from '../provider/fal.js';
+import { ModalProvider } from '../provider/modal.js';
 import { ProviderError, type GenerationProvider } from '../provider/provider.js';
 
 export function createProvider(ctx: Ctx): GenerationProvider {
@@ -14,6 +15,8 @@ export function createProvider(ctx: Ctx): GenerationProvider {
       return new FakeProvider(ctx.cfg.NODE_ENV === 'test' ? 20 : 400);
     case 'fal':
       return new FalProvider({ key: ctx.cfg.FAL_KEY!, baseUrl: ctx.cfg.FAL_BASE_URL });
+    case 'modal':
+      return new ModalProvider({ url: ctx.cfg.MODAL_TRELLIS_URL!, token: ctx.cfg.MODAL_SERVICE_TOKEN! });
   }
 }
 
