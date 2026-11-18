@@ -104,7 +104,11 @@ export class LocalAuth implements AuthClient {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: addr }),
     });
     const body = await r.json().catch(() => ({}));
-    if (!r.ok) throw new ApiError(r.status, body.error?.code ?? 'auth_error', r.status === 422 ? 'Escribe un email válido' : 'No se ha podido entrar');
+    if (!r.ok) {
+      const msg = r.status === 422 ? 'Escribe un email válido'
+        : r.status === 429 ? 'Demasiados intentos. Espera un minuto y vuelve a probar' : 'No se ha podido entrar';
+      throw new ApiError(r.status, body.error?.code ?? 'auth_error', msg);
+    }
     this.tok = body.token;
     const profile = toProfile(body.user.id, body.user.email);
     try {

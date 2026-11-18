@@ -8,6 +8,10 @@ const dir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 /** Aplica en orden las migraciones SQL pendientes, cada una en su transacción. */
 export async function migrate(db: Db, opts: { local: boolean; log?: (m: string) => void }): Promise<string[]> {
   const log = opts.log ?? (() => {});
+  const enc = (await db.query<{ e: string }>(`select pg_encoding_to_char(encoding) as e from pg_database where datname = current_database()`)).rows[0].e;
+  if (enc !== 'UTF8') {
+    throw new Error(`La base de datos usa ${enc}; hace falta UTF8 (emojis, acentos, otros alfabetos). Recréala con codificación UTF8.`);
+  }
   await db.query(`create table if not exists schema_migrations (
     name text primary key, applied_at timestamptz not null default now())`);
   const done = new Set((await db.query<{ name: string }>('select name from schema_migrations')).rows.map((r) => r.name));

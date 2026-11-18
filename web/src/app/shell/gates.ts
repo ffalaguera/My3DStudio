@@ -7,6 +7,8 @@ import { Api, Estimate } from '../data/api';
 export class Gates {
   private readonly api = inject(Api);
   readonly me = toSignal(this.api.me(), { initialValue: null });
+  /** La sesión llega antes que el perfil (/me): para saber si hay usuario se mira la sesión (BUG-007). */
+  readonly session = toSignal(this.api.session(), { initialValue: null });
 
   readonly loginOpen = signal(false);
   readonly paywall = signal<{ title: string; detail: string; kind: Estimate['reason'] } | null>(null);
@@ -14,7 +16,7 @@ export class Gates {
 
   /** Abre S02 si no hay sesión. Resuelve true cuando el usuario ha entrado. */
   ensureSignedIn(): Promise<boolean> {
-    if (this.me()) return Promise.resolve(true);
+    if (this.session()) return Promise.resolve(true);
     this.loginOpen.set(true);
     return new Promise((res) => (this.loginResolve = res));
   }

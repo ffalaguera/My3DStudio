@@ -59,7 +59,7 @@ export function createApp(ctx: Ctx) {
     res.json({ ok: true });
   });
 
-  const test = cfg.NODE_ENV === 'test';
+  const test = cfg.NODE_ENV === 'test' && !process.env['TEST_REAL_RATE_LIMITS'];
   const limiter = (limit: number, windowMs = 60_000) =>
     rateLimit({ windowMs, limit: test ? 10_000 : limit, standardHeaders: 'draft-7', legacyHeaders: false,
       keyGenerator: (req) => req.user?.id ?? req.ip ?? 'anon',
@@ -68,10 +68,12 @@ export function createApp(ctx: Ctx) {
   const auth = requireUser(cfg, ctx.db);
   const events = eventRoutes(ctx);
 
-  app.use('/api/dev', limiter(10)); // solo existe con LOCAL_AUTH
+  app.use('/api/dev', limiter(60)); // solo existe con LOCAL_AUTH (desarrollo y e2e)
   app.use('/api', accountRoutes(ctx, auth));
   app.use('/api/uploads', auth, limiter(30), uploadRoutes(ctx));
-  app.use('/api/tasks', auth, (req, res, next) => (req.method === 'POST' ? limiter(30)(req, res, next) : next()), taskRoutes(ctx));
+  // BUG-005: el limitador se crea una vez; creado dentro del middleware empezaba de cero en cada petición
+  const createTaskLimit = limiter(30);
+  app.use('/api/tasks', auth, (req, res, next) => (req.method === 'POST' ? createTaskLimit(req, res, next) : next()), taskRoutes(ctx));
   app.use('/api/assets', auth, limiter(120), assetRoutes(ctx));
   app.use('/api/billing', auth, limiter(10), billingRoutes(ctx));
   app.use('/api/events', auth, events);

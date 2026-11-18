@@ -1,0 +1,123 @@
+import { a11y, chooseImage, expect, setPlan, signIn, sql, test, waitForModel } from './fixtures';
+import type { Page } from '@playwright/test';
+
+async function makeModel(page: Page, prompt: string) {
+  await page.goto('/crear');
+  await page.getByRole('radio', { name: 'Texto' }).click();
+  await page.getByLabel('Describe el objeto').fill(prompt);
+  await page.getByRole('button', { name: /^Generar/ }).click();
+  await waitForModel(page);
+}
+
+test.describe('F04 créditos y planes', () => {
+  test('F04-N1 sin saldo: aviso con la cifra exacta', async ({ page }) => {
+    await page.goto('/crear');
+    const email = await signIn(page);
+    await setPlan(email, 'free', 10);
+    await page.reload();
+    await chooseImage(page);
+    await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
+    await page.getByRole('button', { name: /^Generar/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'No tienes créditos suficientes' });
+    await expect(dialog).toContainText('Te faltan 5 créditos');
+    await dialog.getByRole('button', { name: 'Ver planes' }).click();
+    await expect(page).toHaveURL(/\/precios/);
+  });
+
+  test('F04-H1 + F04-E1 precios: mensual/anual y pagos sin configurar', async ({ page }) => {
+    await page.goto('/precios');
+    await expect(page.getByRole('heading', { name: 'Planes' })).toBeVisible();
+    expect(await a11y(page), 'axe S10').toEqual([]);
+    await expect(page.getByRole('listitem').filter({ hasText: 'Pro' }).getByText('13 €')).toBeVisible();
+    await page.getByRole('radio', { name: 'Mensual' }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Pro' }).getByText('19 €')).toBeVisible();
+    await page.getByRole('button', { name: 'Elegir Pro' }).click();
+    await signIn(page); // tras entrar, la elección del plan continúa sola
+    await expect(page.getByRole('status').filter({ hasText: 'Los pagos se activan pronto' })).toBeVisible();
+  });
+});
+
+test.describe('F05 mis modelos', () => {
+  test('F05-H1 renombrar desde el visor', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+    await makeModel(page, 'una jarra');
+    await page.getByRole('button', { name: 'Renombrar' }).click();
+    await page.getByRole('textbox', { name: 'Nombre del modelo' }).fill('Jarra de agua');
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Resultado' }).getByRole('heading', { name: 'Jarra de agua' })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Mis modelos' }).click();
+    await expect(page.getByRole('link', { name: /Jarra de agua/ })).toBeVisible();
+  });
+
+  test('F05-H2 + F05-H3 filtrar, buscar sin resultados y borrar', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+    await makeModel(page, 'una taza');
+    await page.goto('/mis-modelos');
+    await expect(page.getByRole('link', { name: /una taza/ })).toBeVisible();
+    expect(await a11y(page), 'axe S06').toEqual([]);
+    await page.getByRole('button', { name: 'Topología limpia' }).click();
+    await expect(page.getByText('Nada coincide con tu búsqueda')).toBeVisible();
+    await page.getByRole('button', { name: 'Quitar filtros' }).click();
+    await page.getByRole('textbox', { name: 'Buscar en tus modelos' }).fill('taza');
+    await expect(page.getByRole('link', { name: /una taza/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Acciones de una taza' }).click();
+    await page.getByRole('menuitem', { name: 'Borrar' }).click();
+    const dialog = page.getByRole('dialog', { name: '¿Borrar este modelo?' });
+    await expect(dialog.getByRole('button', { name: 'Cancelar' })).toBeFocused();
+    await dialog.getByRole('button', { name: 'Borrar' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Has borrado «una taza»' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /una taza/ })).toHaveCount(0);
+  });
+
+  test('F05-E1 nombre de 60+ caracteres', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+    const long = 'una lámpara de pie de estilo industrial con brazo articulado y pantalla de latón envejecido';
+    await makeModel(page, long);
+    await page.goto('/mis-modelos');
+    const name = page.getByRole('main').getByText(long.slice(0, 40), { exact: false }).first();
+    await expect(name).toBeVisible();
+    const fits = await name.evaluate((el) => el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow === 'ellipsis');
+    expect(fits).toBe(true);
+  });
+
+  test('F05-E2 borrado en otra pestaña: "Este modelo ya no existe"', async ({ page, context }) => {
+    await page.goto('/');
+    await signIn(page);
+    await makeModel(page, 'un cuenco');
+    const url = page.url();
+    const id = new URL(url).searchParams.get('modelo')!;
+    await sql('delete from assets where id = $1', [id]);
+    const other = await context.newPage();
+    await other.goto(url);
+    // la sesión local vive en sessionStorage (por pestaña): entrar otra vez no hace falta para ver el aviso
+    await expect(other.getByText(/ya no existe|Entra para ver/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('alert').filter({ hasText: 'Este modelo ya no existe' })).toBeVisible();
+  });
+
+  test('F05-N1 privado en plan Gratis: aviso de plan', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+    await makeModel(page, 'un plato');
+    await page.getByRole('region', { name: 'Resultado' }).getByRole('button', { name: 'Público' }).click();
+    await expect(page.getByRole('dialog', { name: 'Esto no está en tu plan' })).toContainText('Los modelos privados están en los planes de pago');
+  });
+
+  test('F05-N2 modelo de otro usuario: no se ve nada', async ({ page, browser }) => {
+    await page.goto('/');
+    await signIn(page);
+    await makeModel(page, 'un secreto');
+    const id = new URL(page.url()).searchParams.get('modelo')!;
+    const ctx2 = await browser.newContext();
+    const other = await ctx2.newPage();
+    await other.goto('/');
+    await signIn(other);
+    await other.goto(`/crear?modelo=${id}`);
+    await expect(other.getByRole('alert').filter({ hasText: 'Este modelo ya no existe' })).toBeVisible();
+    await expect(other.getByText('un secreto')).toHaveCount(0);
+    await ctx2.close();
+  });
+});

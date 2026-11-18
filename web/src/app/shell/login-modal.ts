@@ -12,7 +12,7 @@ import { Toasts } from '../ui/toast';
   imports: [Modal, Icon, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ui-modal [open]="gates.loginOpen()" heading="Entra y empieza a crear" (closed)="gates.loginFinished(!!gates.me())">
+    <ui-modal [open]="gates.loginOpen()" heading="Entra y empieza a crear" (closed)="gates.loginFinished(!!gates.session())">
       <p class="text-sm text-text-muted flex items-center gap-2">
         <ui-icon name="zap" /> Al registrarte recibes 200 créditos gratis cada mes.
       </p>

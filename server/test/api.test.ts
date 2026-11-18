@@ -127,6 +127,15 @@ describe('generación y créditos', () => {
     expect(est).toMatchObject({ allowed: false, reason: 'insufficient_credits', credits: 15 });
   });
 
+  it('BUG-001 emoji y caracteres fuera de Latin-1 en el prompt y el nombre (base en UTF-8)', async () => {
+    const u = await login(env);
+    const t = await env.api().post('/api/tasks').set(u.h).set('Idempotency-Key', randomUUID())
+      .send(textTask('🦊 zorro de cerámica, ñ, 東京')).expect(201);
+    await drain();
+    const id = (await env.api().get(`/api/tasks/${t.body.task.id}`).set(u.h)).body.task.assetIds[0];
+    expect((await env.api().get(`/api/assets/${id}`).set(u.h)).body.asset.name).toBe('🦊 zorro de cerámica, ñ, 東京');
+  });
+
   it('validación: texto sin prompt, imagen sin subida, campos de más', async () => {
     const u = await login(env);
     await env.api().post('/api/tasks').set(u.h).set('Idempotency-Key', randomUUID()).send(textTask('')).expect(422);

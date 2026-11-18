@@ -6,7 +6,10 @@ const DIR = './.pgdata-test';
 
 export async function setup() {
   rmSync(DIR, { recursive: true, force: true });
-  const db = new EmbeddedPostgres({ databaseDir: DIR, user: 'postgres', password: 'postgres', port: PORT, persistent: false, onLog: () => {} });
+  const db = new EmbeddedPostgres({
+    databaseDir: DIR, user: 'postgres', password: 'postgres', port: PORT, persistent: false, onLog: () => {},
+    initdbFlags: ['--encoding=UTF8', '--locale=C'], // como Supabase; sin esto Windows usa WIN1252 (BUG-001)
+  });
   await db.initialise();
   await db.start();
   await db.createDatabase('forma_test');

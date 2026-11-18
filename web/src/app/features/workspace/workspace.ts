@@ -153,21 +153,28 @@ export class Workspace {
   }
 
   protected async generate(): Promise<void> {
+    // BUG-006: el bloqueo va antes de cualquier await; si no, un doble clic crea dos tareas
     if (this.submitting()) return;
-    if (!(await this.gates.ensureSignedIn())) return;
-    const req = this.request();
-    if (req.type === 'image_to_model' && !req.uploadId) {
-      this.uploadError.set('Sube una imagen para generar');
-      return;
-    }
-    if (req.type === 'text_to_model' && !req.prompt?.trim()) {
-      this.promptError.set('Describe el objeto que quieres crear');
-      return;
-    }
-    if (req.series === 'smart' && this.faceLimitError()) return;
     this.submitting.set(true);
     try {
-      const est = await this.api.estimate(req);
+      if (!(await this.gates.ensureSignedIn())) return;
+      const req = this.request();
+      // BUG-002: si la opción elegida no está en el plan, decirlo antes de pedir imagen o texto
+      const early = await this.api.estimate(req).catch(() => null);
+      if (early && !early.allowed && early.reason === 'plan_feature') {
+        this.gates.showPaywall(early.reason, early.detail ?? 'No disponible');
+        return;
+      }
+      if (req.type === 'image_to_model' && !req.uploadId) {
+        this.uploadError.set('Sube una imagen para generar');
+        return;
+      }
+      if (req.type === 'text_to_model' && !req.prompt?.trim()) {
+        this.promptError.set('Describe el objeto que quieres crear');
+        return;
+      }
+      if (req.series === 'smart' && this.faceLimitError()) return;
+      const est = early ?? (await this.api.estimate(req));
       if (!est.allowed) {
         this.gates.showPaywall(est.reason, est.detail ?? 'No disponible');
         return;

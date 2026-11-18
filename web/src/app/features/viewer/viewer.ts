@@ -16,7 +16,9 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgl';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block relative viewport-bg overflow-hidden' },
   template: `
-    <div #mount class="absolute inset-0 outline-none" tabindex="0" role="img"
+    <!-- BUG-003: solo se puede enfocar cuando hay un modelo; antes era enfocable estando oculto -->
+    <div #mount class="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+      [attr.tabindex]="state() === 'ready' ? 0 : null" [attr.role]="state() === 'ready' ? 'img' : null"
       [attr.aria-label]="state() === 'ready' ? 'Modelo 3D: ' + name() + '. Flechas para girar, + y - para acercar, 0 para reiniciar' : null"
       [attr.aria-hidden]="state() === 'ready' ? null : 'true'"
       (keydown)="keys($event)"></div>

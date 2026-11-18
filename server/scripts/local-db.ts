@@ -4,7 +4,10 @@ import EmbeddedPostgres from 'embedded-postgres';
 import { existsSync } from 'node:fs';
 
 const port = Number(process.env['LOCAL_DB_PORT'] ?? 54329);
-const db = new EmbeddedPostgres({ databaseDir: './.pgdata', user: 'postgres', password: 'postgres', port, persistent: true });
+const db = new EmbeddedPostgres({
+  databaseDir: './.pgdata', user: 'postgres', password: 'postgres', port, persistent: true,
+  initdbFlags: ['--encoding=UTF8', '--locale=C'], // como Supabase; sin esto Windows usa WIN1252 (BUG-001)
+});
 if (!existsSync('./.pgdata/PG_VERSION')) {
   await db.initialise();
 }
