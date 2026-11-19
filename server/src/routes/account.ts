@@ -14,7 +14,7 @@ export function accountRoutes(ctx: Ctx, auth: ReturnType<typeof import('../lib/a
   /** Qué puede hacer este servidor según su configuración (formatos con o sin Blender, pagos activos). */
   r.get('/capabilities', (_req, res) => {
     res.json({
-      exportFormats: ctx.cfg.BLENDER_PATH ? ['glb', 'obj', 'stl', 'usdz', 'fbx', '3mf'] : ['glb', 'obj', 'stl'],
+      exportFormats: ctx.cfg.BLENDER_PATH ? ['glb', 'obj', 'stl', '3mf', 'usdz', 'fbx'] : ['glb', 'obj', 'stl', '3mf'],
       billing: !!ctx.stripe,
       localAuth: ctx.cfg.LOCAL_AUTH,
     });

@@ -150,6 +150,24 @@ Preguntas para el abogado y para fal (por escrito):
   (créditos del periodo), `invoice.payment_failed` (email). El estado vive en la base y lo cambian solo los webhooks.
 - **Email**: plantillas propias (pago fallido, cuenta borrada) por Resend o consola.
 
+## Exportación (2026-11-19)
+
+| formato | cómo | verificado |
+| --- | --- | --- |
+| GLB | el del motor, tal cual | sí |
+| OBJ, STL | en el servidor (JS) | sí |
+| 3MF | en el servidor (JS): ZIP con malla en milímetros, **sin color** | test de estructura; Blender 4.5 ya no trae exportador de 3MF |
+| FBX | Blender sin interfaz (`BLENDER_PATH`) | sí: con la tetera real, 18,8 MB en 4,7 s; reimportado en Blender: 1 malla, 482.174 caras, 2 texturas 2048 px incrustadas |
+| USDZ | Blender sin interfaz | sí: 34,1 MB en 3,7 s |
+
+- Local: Blender 4.5.16 LTS portátil en `server/.tools` (fuera de git), verificado con su SHA-256 oficial.
+- Producción: `server/Dockerfile` instala Blender 4.5.16 para Linux comprobando su SHA-256. **La imagen no se ha
+  construido todavía** (Docker Desktop no estaba en marcha); se prueba en `/replica-deploy`.
+- Si Blender falla o no crea el archivo, el usuario ve "No se ha podido convertir el modelo a FBX. Prueba con GLB u
+  OBJ" y la exportación no cuenta para el límite del plan. Tiempo límite: 300 s (el primer arranque es lento).
+- Sin `BLENDER_PATH`, la app solo ofrece GLB, OBJ, STL y 3MF (`/api/capabilities`).
+- El arranque de la API ahora espera hasta 60 s a la base de datos en vez de caerse si aún está arrancando.
+
 ## Diferencias con architecture.md
 
 - SSE por usuario (`/api/events`) en vez de por tarea: una sola conexión para toda la cola.
@@ -177,8 +195,8 @@ Preguntas para el abogado y para fal (por escrito):
 ## Pendiente
 
 - Motor 3D real (decisión de producto y licencia).
-- Miniaturas: hoy son la imagen de entrada; los modelos creados desde texto no tienen. Hace falta render con Blender en
-  el trabajador.
+- Miniaturas: hoy son la imagen de entrada; los modelos creados desde texto no tienen. Blender ya está en el
+  trabajador: falta el render.
 - Acceso con contraseña y restablecimiento (Tripo lo tiene como alternativa; aquí solo enlace mágico y Google).
 - Packs de créditos (Checkout en modo `payment` + `checkout.session.completed`).
 - Moderación de prompts e imágenes antes de congelar créditos.

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { Document } from '@gltf-transform/core';
+import { strToU8, zipSync } from 'fflate';
 import { gltfIO } from './gltf.js';
 import { HttpError } from './http.js';
 
@@ -90,8 +91,37 @@ function toStl(tris: Tri[]): Buffer {
   return buf;
 }
 
-/** FBX, USDZ y 3MF con Blender sin interfaz (trabajo `convert` de architecture.md). */
-async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz' | '3mf'): Promise<Buffer> {
+/**
+ * 3MF para impresión 3D, generado aquí (Blender 4.5 ya no trae exportador de 3MF de serie).
+ * Solo geometría: un objeto por malla, en milímetros (glTF está en metros). El color de las texturas no se incluye.
+ */
+function to3mf(tris: Tri[]): Buffer {
+  const f = (n: number) => Number((n * 1000).toFixed(4)).toString();
+  const objects: string[] = [];
+  const items: string[] = [];
+  tris.forEach((t, i) => {
+    const id = i + 1;
+    const v: string[] = [];
+    for (let k = 0; k < t.positions.length; k += 3) v.push(`<vertex x="${f(t.positions[k])}" y="${f(t.positions[k + 1])}" z="${f(t.positions[k + 2])}"/>`);
+    const tr: string[] = [];
+    for (let k = 0; k < t.indices.length; k += 3) tr.push(`<triangle v1="${t.indices[k]}" v2="${t.indices[k + 1]}" v3="${t.indices[k + 2]}"/>`);
+    objects.push(`<object id="${id}" type="model"><mesh><vertices>${v.join('')}</vertices><triangles>${tr.join('')}</triangles></mesh></object>`);
+    items.push(`<item objectid="${id}"/>`);
+  });
+  const model = `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="es-ES" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">` +
+    `<metadata name="Application">Forma</metadata><resources>${objects.join('')}</resources><build>${items.join('')}</build></model>`;
+  const types = '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>';
+  const rels = '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>';
+  return Buffer.from(zipSync({
+    '[Content_Types].xml': strToU8(types), '_rels/.rels': strToU8(rels), '3D/3dmodel.model': strToU8(model),
+  }, { level: 6 }));
+}
+
+/** FBX y USDZ con Blender sin interfaz (trabajo `convert` de architecture.md). */
+async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz'): Promise<Buffer> {
   const dir = await mkdtemp(join(tmpdir(), 'forma-'));
   try {
     const src = join(dir, 'in.glb'), dst = join(dir, `out.${format}`);
@@ -99,11 +129,20 @@ async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz' |
     const exporter = {
       fbx: `bpy.ops.export_scene.fbx(filepath=r'${dst}', path_mode='COPY', embed_textures=True)`,
       usdz: `bpy.ops.wm.usd_export(filepath=r'${dst}')`,
-      '3mf': `bpy.ops.export_mesh.threemf(filepath=r'${dst}')`, // requiere el add-on 3MF
     }[format];
     const py = `import bpy\nbpy.ops.wm.read_factory_settings(use_empty=True)\nbpy.ops.import_scene.gltf(filepath=r'${src}')\n${exporter}\n`;
-    await run(blender, ['-b', '--factory-startup', '--python-expr', py], { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 });
-    return await readFile(dst);
+    try {
+      // --python-exit-code: un error en el script sale con código distinto de 0 en vez de terminar "bien"
+      // 300 s: el primer arranque de un Blender recién instalado puede tardar (antivirus, cachés)
+      await run(blender, ['-b', '--factory-startup', '--python-exit-code', '1', '--python-expr', py],
+        { timeout: 300_000, maxBuffer: 20 * 1024 * 1024 });
+      return await readFile(dst);
+    } catch (e) {
+      const err = e as { code?: unknown; killed?: boolean; stderr?: string; stdout?: string; message?: string };
+      console.error(`[convert] Blender no ha producido ${format}:`, err.killed ? 'tiempo agotado' : String(err.code ?? ''),
+        (err.stderr || err.stdout || err.message || '').toString().split('\n').slice(-5).join(' | ').slice(0, 400));
+      throw new HttpError(500, 'conversion_failed', `No se ha podido convertir el modelo a ${format.toUpperCase()}. Prueba con GLB u OBJ`);
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -111,9 +150,9 @@ async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz' |
 
 export async function convert(glb: Buffer, format: Format, blenderPath?: string): Promise<Buffer> {
   if (format === 'glb') return glb;
-  if (format === 'obj' || format === 'stl') {
+  if (format === 'obj' || format === 'stl' || format === '3mf') {
     const tris = triangles(await gltfIO().readBinary(new Uint8Array(glb)));
-    return format === 'obj' ? toObj(tris) : toStl(tris);
+    return format === 'obj' ? toObj(tris) : format === 'stl' ? toStl(tris) : to3mf(tris);
   }
   if (!blenderPath) throw new HttpError(501, 'server_conversion', 'Este formato necesita Blender en el servidor y aún no está activado');
   return viaBlender(blenderPath, glb, format);

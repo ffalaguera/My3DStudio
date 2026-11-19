@@ -10,7 +10,7 @@ Cola de tareas asíncrona con progreso,generación,must,yes,yes,queued/running/s
 Congelar créditos y devolverlos si la tarea falla,créditos,must,yes,yes,modelo congelar-y-deducir de la API pública | clon: API falsa con las reglas del esquema; probado fallo y cancelación | backend: probado con tests (fallo / cancelación / atasco / concurrencia)
 Visor 3D con órbita y zoom,visor,must,yes,yes,S05/S07; three.js o model-viewer | clon: three.js; luces / malla / suelo / captura / teclado
 Exportar GLB,exportación,must,yes,yes,formato nativo para web y AR
-Exportar FBX y OBJ,exportación,must,yes,partial,conversión en servidor | clon: OBJ sí; FBX necesita conversión en servidor (Blender) | backend: OBJ en servidor; FBX con Blender (BLENDER_PATH)
+Exportar FBX y OBJ,exportación,must,yes,yes,"conversión en servidor | clon: OBJ sí; FBX necesita conversión en servidor (Blender) | backend: OBJ en servidor; FBX con Blender (BLENDER_PATH) | FBX con Blender en el servidor, verificado (malla y texturas incrustadas)"
 Exportar STL para impresión 3D,exportación,must,yes,yes,caso de uso destacado en la web
 Biblioteca Mis assets,assets,must,yes,yes,S06; con estado vacío | clon: S06 con miniaturas / búsqueda / estados vacío y cargando
 Borrar un modelo,assets,must,yes,yes,clon: con confirmación
@@ -29,7 +29,7 @@ Varias variantes por generación (1/2/4),generación,should,yes,yes,Smart Mesh |
 Packs de créditos que no caducan,pagos,should,yes,no,$10 = 1000 créditos con bonus en packs grandes | clon: la bolsa permanente existe en la API falsa; falta la compra
 Reintentar generación,generación,should,yes,yes,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no | backend: reintentos gratis por plan
 Filtros en Mis assets (texturizado / sin textura / rig),assets,should,yes,yes,S06 | clon: sin filtro de rig (no hay rig todavía)
-Exportar USDZ y 3MF,exportación,should,yes,partial,USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor | backend: con Blender (BLENDER_PATH)
+Exportar USDZ y 3MF,exportación,should,yes,partial,"USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor | backend: con Blender (BLENDER_PATH) | USDZ con Blender verificado; 3MF generado en el servidor sin color (solo geometría, en mm)"
 Opciones de exportación (incluir texturas),exportación,should,yes,no,S08
 Historial de uso de créditos,créditos,should,yes,yes,inferido de la API de historial de uso | clon: S12 | backend: credit_ledger
 Licencia según plan (atribución en Free y comercial en pago),legal,should,yes,partial,definir en tus propios términos | clon: campo license por modelo; faltan los términos
