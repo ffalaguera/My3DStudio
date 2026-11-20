@@ -49,3 +49,10 @@ Plugins DCC para Blender / Unity / Unreal / etc.,integraciones,skip,yes,skip,cad
 Agentic Canvas,generación,skip,yes,skip,producto beta aparte y fuera del bucle principal
 Modelos de imagen de terceros (Nano Banana / GPT Image / Midjourney),generación,skip,yes,skip,acuerdos y licencias con terceros
 API pública / CLI / app móvil,plataforma,skip,yes,skip,fuera del alcance web elegido
+Descarga garantizada en GLB/OBJ/STL también en Gratis (aviso previo si un formato es de pago),exportación,must,no,no,fixes.md F1; temas «gratis sin descarga» (38) y precio (62)
+Créditos mensuales que pasan al mes siguiente (máx. 1 mes),créditos,should,no,no,"fixes.md F2; tema créditos que caducan (38, 3 fuentes)"
+Cancelar en un clic sin retención y con email de confirmación,pagos,must,no,partial,fixes.md F3; temas cobros (46) y cancelación (28) | clon: portal de Stripe ya integrado; falta el email y quitar pasos
+Reembolso automático en 48 h si no se han gastado créditos,pagos,should,no,no,fixes.md F4; tema reembolsos (14)
+Tabla pública de costes en créditos y aviso de 30 días antes de cambiarlos,pagos,should,no,partial,fixes.md F5; tema precio (62) | clon: coste visible antes de generar
+Un reintento gratis por generación si el modelo sale mal,generación,should,no,no,fixes.md F6; tema calidad (26 + ~15 sin tema)
+Comprobación de imprimibilidad antes de descargar STL/3MF (malla cerrada / tamaño en mm),exportación,should,no,no,fixes.md F8; tema impresión 3D (17)
