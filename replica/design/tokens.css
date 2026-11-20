@@ -1,25 +1,25 @@
 /* GENERADO por build-tokens.mjs desde tokens.json. No editar a mano. */
 :root {
   color-scheme: dark;
-  --color-bg: 11 11 13;
-  --color-surface: 20 21 24;
-  --color-surface-2: 29 30 34;
-  --color-surface-3: 42 43 48;
-  --color-border: 46 48 54;
+  --color-bg: 10 12 12;
+  --color-surface: 18 22 22;
+  --color-surface-2: 26 31 31;
+  --color-surface-3: 38 44 44;
+  --color-border: 44 52 52;
   --color-border-input: 107 111 120;
   --color-text: 242 242 243;
   --color-text-muted: 163 166 173;
-  --color-accent: 236 236 238;
-  --color-accent-hover: 255 255 255;
-  --color-on-accent: 17 18 20;
-  --color-highlight: 169 174 185;
-  --color-highlight-surface: 36 38 44;
-  --color-focus: 236 236 238;
+  --color-accent: 46 196 182;
+  --color-accent-hover: 95 216 204;
+  --color-on-accent: 6 32 29;
+  --color-highlight: 95 216 204;
+  --color-highlight-surface: 16 48 44;
+  --color-focus: 95 216 204;
   --color-danger: 255 122 114;
   --color-success: 76 195 138;
   --color-warning: 242 184 75;
-  --color-viewport-from: 58 59 64;
-  --color-viewport-to: 20 21 24;
+  --color-viewport-from: 49 58 57;
+  --color-viewport-to: 18 22 22;
   --color-overlay: 0 0 0;
   --font-sans: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-mono: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace;

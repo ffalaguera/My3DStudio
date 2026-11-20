@@ -34,7 +34,7 @@ function colorFromText(text: string): string {
 //
 // Para probar estados: un prompt o nombre de archivo que contenga "fallo" hace fallar la tarea al 30 %.
 
-const STORE_KEY = 'clon-tripo:fake-api:v1';
+const STORE_KEY = 'my3dstudio:fake-api:v1';
 const TICK_MS = 400;
 const DEMO_SECONDS = { hd: 18, smart: 8 } as const;
 

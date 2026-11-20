@@ -1,4 +1,4 @@
--- Esquema inicial del clon de Tripo Studio. Postgres 15+ en Supabase (región UE).
+-- Esquema inicial de My3DStudio. Postgres 15+ en Supabase (región UE).
 -- Reglas de acceso: Express es el único cliente y filtra por user_id en cada consulta
 -- (las fichas públicas filtran por privacy = 'public'). RLS activado sin políticas en
 -- todas las tablas, para que la clave anónima de Supabase no pueda leer ni escribir nada.

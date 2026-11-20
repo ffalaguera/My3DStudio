@@ -63,7 +63,7 @@ type Chip = 'all' | 'hd' | 'smart' | 'textured' | 'untextured';
             <button type="button" class="btn btn-secondary" (click)="q.set(''); chip.set('all')">Quitar filtros</button>
           } @else {
             <p class="text-lg">Aún no tienes modelos</p>
-            <p class="text-sm text-text-muted">Sube una imagen y genera el primero</p>
+            <p class="text-sm text-text-muted">Sube una foto o describe una idea. Verás el coste antes de generar</p>
             <a routerLink="/crear" class="btn btn-primary">Crear modelo</a>
           }
         </div>

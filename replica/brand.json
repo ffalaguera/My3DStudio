@@ -1,0 +1,6 @@
+{
+  "name": "My3DStudio",
+  "avoid": ["Tripo", "Tripo3D", "Tripo Studio", "HOLYMOLLY", "VAST AI"],
+  "domains": ["tripo3d.ai", "studio.tripo3d.ai"],
+  "colors": ["#f9cf00", "#5b4cf0"]
+}

@@ -72,7 +72,7 @@ export class SupabaseAuth implements AuthClient {
 
 /** Solo desarrollo (servidor con LOCAL_AUTH=1): entra con cualquier email, sin contraseña. */
 export class LocalAuth implements AuthClient {
-  private static readonly KEY = 'clon-tripo:local-token';
+  private static readonly KEY = 'my3dstudio:local-token';
   readonly user$ = new BehaviorSubject<Profile | null>(null);
   readonly ready = Promise.resolve();
   private tok: string | null = null;

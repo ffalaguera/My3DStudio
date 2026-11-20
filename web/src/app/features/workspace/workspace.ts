@@ -186,7 +186,7 @@ export class Workspace {
       this.toasts.show('info', task.queuePosition ? 'En cola' : 'Generando tu modelo');
     } catch (e) {
       if (e instanceof ApiError && (e.status === 402 || e.status === 403)) this.gates.showPaywall(e.code as Estimate['reason'], e.message);
-      else this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido crear la tarea');
+      else this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido crear el modelo. No se te ha cobrado nada');
     } finally {
       this.submitting.set(false);
     }
@@ -244,7 +244,7 @@ export class Workspace {
       case 'queued': return t.queuePosition && t.queuePosition > 1 ? `En cola · ${t.queuePosition - 1} por delante` : 'En cola';
       case 'running': return `Generando · ${Math.floor(t.progress)} %`;
       case 'success': return 'Listo';
-      case 'failed': return 'Ha fallado';
+      case 'failed': return 'Ha fallado · créditos devueltos';
       case 'cancelled': return 'Cancelada';
     }
   }

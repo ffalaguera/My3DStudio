@@ -126,7 +126,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await page.goto('/crear');
     await signIn(page);
     await page.evaluate(() => {
-      const k = 'clon-tripo:local-token';
+      const k = 'my3dstudio:local-token';
       const s = JSON.parse(sessionStorage.getItem(k)!);
       s.token = s.token.slice(0, -4) + 'AAAA'; // firma alterada
       sessionStorage.setItem(k, JSON.stringify(s));
