@@ -12,8 +12,8 @@ export async function setup() {
   });
   await db.initialise();
   await db.start();
-  await db.createDatabase('forma_test');
-  process.env['TEST_DATABASE_URL'] = `postgres://postgres:postgres@localhost:${PORT}/forma_test`;
+  await db.createDatabase('my3dstudio_test');
+  process.env['TEST_DATABASE_URL'] = `postgres://postgres:postgres@localhost:${PORT}/my3dstudio_test`;
   return async () => {
     await db.stop();
     rmSync(DIR, { recursive: true, force: true });

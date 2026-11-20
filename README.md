@@ -3,8 +3,6 @@
 Aplicación web que convierte una imagen o un texto en un modelo 3D con texturas, listo para ver en el navegador y
 descargar en GLB, OBJ, STL, FBX, USDZ o 3MF. Funciona con créditos y planes de suscripción.
 
-> Nombre de producto provisional en el código: **Forma**.
-
 ## Qué hace
 
 - **Imagen a 3D**: subes un JPG, PNG o WEBP (hasta 20 MB) y obtienes un modelo texturizado.

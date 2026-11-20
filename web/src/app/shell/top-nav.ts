@@ -13,8 +13,8 @@ import { Api } from '../data/api';
     <nav aria-label="Principal"
       class="h-nav mx-3 mt-3 rounded-pill bg-surface/90 backdrop-blur border border-border shadow-float flex items-center gap-2 sm:gap-4 px-2 sm:px-3">
       <a routerLink="/" class="flex items-center gap-2 pr-2 rounded-pill" aria-label="Inicio">
-        <span class="w-8 h-8 rounded-full bg-accent text-on-accent grid place-items-center text-xs font-bold">FM</span>
-        <span class="hidden sm:inline text-sm font-semibold">Forma</span>
+        <span class="w-8 h-8 rounded-full bg-accent text-on-accent grid place-items-center text-xs font-bold">3D</span>
+        <span class="hidden sm:inline text-sm font-semibold">My3DStudio</span>
       </a>
 
       <div class="relative">

@@ -1,6 +1,6 @@
-# API y trabajador de Forma, con Blender para exportar FBX y USDZ.
-#   docker build -t forma-server .
-#   docker run --env-file .env.production -p 8787:8787 forma-server
+# API y trabajador de My3DStudio, con Blender para exportar FBX y USDZ.
+#   docker build -t my3dstudio-server .
+#   docker run --env-file .env.production -p 8787:8787 my3dstudio-server
 # Un mismo contenedor sirve de API (RUN_WORKER=0) o de trabajador (RUN_WORKER=1), según el entorno.
 FROM node:24-bookworm-slim
 

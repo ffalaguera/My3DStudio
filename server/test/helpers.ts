@@ -20,7 +20,7 @@ export async function makeEnv() {
     LOCAL_AUTH: '1',
     LOCAL_JWT_SECRET: 'x'.repeat(40),
     STORAGE_DRIVER: 'local',
-    LOCAL_STORAGE_DIR: mkdtempSync(join(tmpdir(), 'forma-test-')),
+    LOCAL_STORAGE_DIR: mkdtempSync(join(tmpdir(), 'my3dstudio-test-')),
     FILE_URL_SECRET: 'y'.repeat(40),
     STRIPE_SECRET_KEY: 'sk_test_solo_para_firmas',
     STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,

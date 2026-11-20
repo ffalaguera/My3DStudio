@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { deflateSync } from 'node:zlib';
 import pg from 'pg';
 
-const DB = 'postgres://postgres:postgres@localhost:54329/forma';
+const DB = 'postgres://postgres:postgres@localhost:54329/my3dstudio';
 
 /** Errores de consola y respuestas 5xx: cualquier test que los produzca falla. */
 export const test = base.extend<{ guard: void }>({

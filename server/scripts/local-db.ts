@@ -12,8 +12,8 @@ if (!existsSync('./.pgdata/PG_VERSION')) {
   await db.initialise();
 }
 await db.start();
-await db.createDatabase('forma').catch(() => {}); // ya existe
-console.log(`[db] Postgres local en postgres://postgres:postgres@localhost:${port}/forma`);
+await db.createDatabase('my3dstudio').catch(() => {}); // ya existe
+console.log(`[db] Postgres local en postgres://postgres:postgres@localhost:${port}/my3dstudio`);
 const stop = async () => {
   await db.stop();
   process.exit(0);

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 
-export const PRODUCT_NAME = 'Forma'; // nombre provisional hasta /replica-brand
+export const PRODUCT_NAME = 'My3DStudio';
 
 @Injectable()
 export class AppTitle extends TitleStrategy {

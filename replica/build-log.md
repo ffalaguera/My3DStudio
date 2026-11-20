@@ -3,7 +3,7 @@
 App en `clon-tripo/web` (Angular 21 + Tailwind 3 con el preset de `replica/design`, three.js, Lucide).
 Datos: `FakeApi` en el navegador con las mismas firmas que la API de `architecture.md`
 (`src/app/data/api.ts`). `/replica-backend` la sustituye por `HttpApi` sin tocar pantallas.
-Nombre provisional del producto: "Forma" (`shell/title.ts`), hasta `/replica-brand`.
+Nombre del producto: "My3DStudio" (`shell/title.ts`). Nombre provisional anterior: "Forma".
 
 Arranque: `npm --prefix clon-tripo/web start -- --port 4300` (o la configuración `clon-tripo-web` de `.claude/launch.json`).
 Para probar el estado de error: un prompt o un archivo cuyo nombre contenga "fallo" hace fallar la tarea al 30 %.

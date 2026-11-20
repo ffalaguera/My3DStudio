@@ -35,7 +35,7 @@ const schema = z
     // Email
     EMAIL_DRIVER: z.enum(['console', 'resend']).default('console'),
     RESEND_API_KEY: z.string().optional(),
-    EMAIL_FROM: z.string().default('Forma <hola@example.com>'),
+    EMAIL_FROM: z.string().default('My3DStudio <hola@example.com>'),
 
     // Motor 3D y conversión
     GENERATION_PROVIDER: z.enum(['fake', 'fal']).default('fake'),

@@ -55,7 +55,7 @@ export async function stats(glb: Buffer): Promise<{ faces: number; vertices: num
 }
 
 function toObj(tris: Tri[]): Buffer {
-  const lines: string[] = ['# exportado por Forma'];
+  const lines: string[] = ['# exportado por My3DStudio'];
   let offset = 1;
   tris.forEach((t, n) => {
     lines.push(`o malla_${n}`);
@@ -69,7 +69,7 @@ function toObj(tris: Tri[]): Buffer {
 function toStl(tris: Tri[]): Buffer {
   const count = tris.reduce((n, t) => n + t.indices.length / 3, 0);
   const buf = Buffer.alloc(84 + count * 50);
-  buf.write('Forma STL', 0);
+  buf.write('My3DStudio STL', 0);
   buf.writeUInt32LE(count, 80);
   let o = 84;
   for (const t of tris) {
@@ -109,7 +109,7 @@ function to3mf(tris: Tri[]): Buffer {
     items.push(`<item objectid="${id}"/>`);
   });
   const model = `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="es-ES" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">` +
-    `<metadata name="Application">Forma</metadata><resources>${objects.join('')}</resources><build>${items.join('')}</build></model>`;
+    `<metadata name="Application">My3DStudio</metadata><resources>${objects.join('')}</resources><build>${items.join('')}</build></model>`;
   const types = '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
     '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>';
@@ -122,7 +122,7 @@ function to3mf(tris: Tri[]): Buffer {
 
 /** FBX y USDZ con Blender sin interfaz (trabajo `convert` de architecture.md). */
 async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz'): Promise<Buffer> {
-  const dir = await mkdtemp(join(tmpdir(), 'forma-'));
+  const dir = await mkdtemp(join(tmpdir(), 'my3dstudio-'));
   try {
     const src = join(dir, 'in.glb'), dst = join(dir, `out.${format}`);
     await writeFile(src, glb);
