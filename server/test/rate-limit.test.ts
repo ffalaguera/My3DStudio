@@ -30,3 +30,12 @@ it('el límite es por usuario: otro usuario no se ve afectado', async () => {
   const r = await env.api().post('/api/tasks').set(v.h).set('Idempotency-Key', randomUUID()).send({});
   expect(r.status).toBe(422);
 });
+
+it('rutas públicas (planes, packs): límite global por IP de 240 por minuto', async () => {
+  const codes: number[] = [];
+  for (let i = 0; i < 241; i++) codes.push((await env.api().get('/api/plans').set('X-Forwarded-For', '198.51.100.9')).status);
+  expect(codes.slice(0, 240).every((c) => c === 200)).toBe(true);
+  expect(codes[240]).toBe(429);
+  // otra IP no se ve afectada
+  expect((await env.api().get('/api/plans').set('X-Forwarded-For', '198.51.100.10')).status).toBe(200);
+});

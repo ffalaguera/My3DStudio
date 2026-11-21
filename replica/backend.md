@@ -176,6 +176,7 @@ Preguntas para el abogado y para fal (por escrito):
 - `GET /api/capabilities`: el frontend sabe qué formatos y pagos están activos.
 
 ## Lista de seguridad
+Revisión a fondo del 2026-11-21, con pruebas y arreglos: [security.md](security.md).
 
 - [x] secretos solo en variables de entorno; `.env*` en `.gitignore`; el frontend solo recibe valores públicos (`config.json`)
 - [x] entrada validada con zod en todas las rutas (cuerpo, parámetros, query y cabecera `Idempotency-Key`)

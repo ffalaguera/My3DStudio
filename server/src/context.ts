@@ -3,6 +3,7 @@ import type { Config } from './config.js';
 import type { Db } from './db.js';
 import type { Storage } from './lib/storage.js';
 import type { Mailer } from './lib/email.js';
+import type { SecurityLog } from './lib/security-log.js';
 
 export interface Ctx {
   cfg: Config;
@@ -12,4 +13,6 @@ export interface Ctx {
   stripe: Stripe | null;
   /** Borra un usuario de Supabase Auth (o de auth.users en local). */
   deleteAuthUser: (userId: string) => Promise<void>;
+  /** Registro de actividad sospechosa (lib/security-log.ts). */
+  security: SecurityLog;
 }

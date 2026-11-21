@@ -83,6 +83,7 @@ Todas las variables están explicadas en [`server/.env.example`](server/.env.exa
 
 ```bash
 npm --prefix server test   # Vitest sobre un Postgres embebido nuevo en cada ejecución
+npm --prefix server run dev:demo                 # API con el motor de demostración (los e2e no corren contra el de pago)
 npm --prefix e2e ci && npm --prefix e2e test   # Playwright (Edge); arranca base, API y web si no están en marcha
 ```
 
@@ -96,7 +97,8 @@ docker build -t my3dstudio-server server
 docker run --env-file .env.production -p 8787:8787 my3dstudio-server
 ```
 
-El frontend se compila con `npm --prefix web run build` y se sirve como sitio estático.
+El frontend se compila con `npm --prefix web run build:prod`, que también genera `_headers` con la CSP y las cabeceras de
+seguridad, y se sirve como sitio estático. Revisión de seguridad: [`replica/security.md`](replica/security.md).
 
 ## Estado
 

@@ -10,7 +10,8 @@
     "db:local": "node --import tsx scripts/local-db.ts",
     "migrate": "node --env-file-if-exists=.env.local --import tsx scripts/migrate.ts",
     "seed": "node --env-file-if-exists=.env.local --import tsx scripts/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:demo": "node scripts/dev-demo.mjs"
   },
   "keywords": [],
   "author": "",
@@ -43,6 +44,7 @@
     "embedded-postgres": "^17.2.0-beta.15",
     "supertest": "^7.0.0",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }

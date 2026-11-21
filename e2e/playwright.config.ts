@@ -1,8 +1,10 @@
 import { defineConfig } from '@playwright/test';
 
-// Contra la app local con la API real (server/.env.local). Arranca lo que no esté ya en marcha.
+// Contra la app local con la API de DEMOSTRACIÓN (motor falso, sin coste). Arranca lo que no esté ya en marcha.
+// global-setup.ts se niega a seguir si la API en marcha usa el motor real de pago.
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.ts',
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -20,7 +22,8 @@ export default defineConfig({
   },
   webServer: [
     { command: 'npm --prefix ../server run db:local', port: 54329, reuseExistingServer: true, timeout: 120_000 },
-    { command: 'npm --prefix ../server run dev', url: 'http://localhost:8787/health', reuseExistingServer: true, timeout: 120_000 },
+    { command: 'npm --prefix ../server run dev:demo', url: 'http://localhost:8787/health', reuseExistingServer: true, timeout: 120_000,
+      env: { GENERATION_PROVIDER: 'fake' } },
     { command: 'npm --prefix ../web start -- --port 4300', url: 'http://localhost:4300', reuseExistingServer: true, timeout: 180_000 },
   ],
 });

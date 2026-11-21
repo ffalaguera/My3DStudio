@@ -11,6 +11,7 @@ import { createMailer } from './lib/email.js';
 import { setCreditCosts } from './lib/credits.js';
 import { errorHandler, HttpError } from './lib/http.js';
 import { createStorage } from './lib/storage.js';
+import { createSecurityLog } from './lib/security-log.js';
 import { accountRoutes } from './routes/account.js';
 import { assetRoutes } from './routes/assets.js';
 import { billingRoutes, stripeWebhook } from './routes/billing.js';
@@ -28,6 +29,7 @@ export function createCtx(cfg: Config, overrides: Partial<Ctx> = {}): Ctx {
     db,
     storage: overrides.storage ?? createStorage(cfg),
     mailer: overrides.mailer ?? createMailer(cfg),
+    security: overrides.security ?? createSecurityLog(),
     stripe: overrides.stripe !== undefined ? overrides.stripe : cfg.STRIPE_SECRET_KEY ? new Stripe(cfg.STRIPE_SECRET_KEY) : null,
     deleteAuthUser: overrides.deleteAuthUser ?? (async (userId) => {
       if (cfg.LOCAL_AUTH) {
@@ -49,14 +51,37 @@ export function createApp(ctx: Ctx) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-  app.use(cors({ origin: cfg.APP_URL, allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'], maxAge: 600 }));
+
+  // HTTPS obligatorio en producción: el proxy del hosting termina TLS y avisa con X-Forwarded-Proto.
+  // /health queda fuera: el healthcheck del contenedor llama por HTTP interno.
+  if (cfg.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+      if (req.secure || req.path === '/health') return next();
+      res.redirect(308, `${new URL(cfg.PUBLIC_API_URL).origin}${req.originalUrl}`);
+    });
+  }
+
+  // La API solo devuelve JSON y archivos: la política más cerrada posible.
+  app.use(helmet({
+    contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] } },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    strictTransportSecurity: { maxAge: 31_536_000, includeSubDomains: true },
+    referrerPolicy: { policy: 'no-referrer' },
+    frameguard: { action: 'deny' },
+  }));
+  // Sin cookies ni credenciales: el token va en Authorization, así que no hay CSRF posible y solo la app lee las respuestas.
+  app.use(cors({ origin: [cfg.APP_URL], credentials: false, allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'], maxAge: 600 }));
 
   // Webhook antes del parser JSON: Stripe firma el cuerpo crudo.
   app.use('/api/webhooks/stripe', stripeWebhook(ctx));
   if (cfg.STORAGE_DRIVER === 'local') app.use('/files', localFiles(ctx));
 
   app.use(express.json({ limit: '100kb' }));
+  // Los datos de cada usuario no se guardan en cachés intermedias ni en el navegador.
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   app.get('/health', async (_req, res) => {
     await ctx.db.query('select 1');
     res.json({ ok: true });
@@ -71,6 +96,9 @@ export function createApp(ctx: Ctx) {
   const auth = requireUser(cfg, ctx.db);
   const events = eventRoutes(ctx);
 
+  // Límite global por IP, también para las rutas públicas (planes, packs, capacidades).
+  app.use('/api', rateLimit({ windowMs: 60_000, limit: test ? 10_000 : 240, standardHeaders: 'draft-7', legacyHeaders: false,
+    handler: (_req, _res, next) => next(new HttpError(429, 'rate_limited', 'Demasiadas peticiones. Espera un momento')) }));
   app.use('/api/dev', limiter(60)); // solo existe con LOCAL_AUTH (desarrollo y e2e)
   app.use('/api', accountRoutes(ctx, auth));
   app.use('/api/uploads', auth, limiter(30), uploadRoutes(ctx));
@@ -81,6 +109,6 @@ export function createApp(ctx: Ctx) {
   app.use('/api/billing', auth, limiter(10), billingRoutes(ctx));
   app.use('/api/events', auth, events);
   app.use((_req, _res, next) => next(new HttpError(404, 'not_found', 'Ruta no encontrada')));
-  app.use(errorHandler);
+  app.use(errorHandler(ctx));
   return Object.assign(app, { closeEvents: () => events.close() });
 }
