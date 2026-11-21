@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, distinctUntilChanged, filter, from, map, merge, startWith, switchMap } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  PlanLimits, Privacy, Profile, Task, Upload,
+  CreditPack, PlanLimits, Privacy, Profile, Task, Upload,
 } from './api';
 import { LocalAuth, SupabaseAuth, type AuthClient } from './auth-client';
 import { RUNTIME_CONFIG } from './runtime-config';
@@ -255,6 +255,15 @@ export class HttpApi extends Api implements OnDestroy {
   async checkout(planId: string, interval: 'month' | 'year'): Promise<void> {
     const { url } = await this.req<{ url: string }>('POST', '/billing/checkout', { planId, interval });
     location.assign(url); // Stripe Checkout; vuelve a /cuenta?pago=ok
+  }
+
+  async creditPacks(): Promise<CreditPack[]> {
+    return (await this.req<{ packs: CreditPack[] }>('GET', '/credit-packs')).packs;
+  }
+
+  async buyPack(packId: string): Promise<void> {
+    const { url } = await this.req<{ url: string }>('POST', '/billing/pack', { packId });
+    location.assign(url); // Stripe Checkout (pago único); vuelve a /cuenta?pack=ok
   }
 
   async billingPortal(): Promise<void> {

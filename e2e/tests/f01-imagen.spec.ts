@@ -14,7 +14,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await expect(page.getByRole('progressbar').first()).toBeVisible();
     expect(await a11y(page), 'axe S04').toEqual([]);
     await waitForModel(page);
-    expect(await credits(page)).toBe(185);
+    expect(await credits(page)).toBe(50); // 100 gratis - 50 de un modelo
     const result = page.getByRole('region', { name: 'Resultado' });
     await expect(result.getByRole('heading', { name: 'jarron' })).toBeVisible();
     await expect(result.getByRole('img', { name: /Modelo 3D: jarron/ })).toBeVisible();
@@ -51,7 +51,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await page.waitForTimeout(1500);
     const rows = await sql(`select count(*)::int as n from tasks t join profiles p on p.id = t.user_id where p.email = $1`, [email]);
     expect(rows[0].n).toBe(1);
-    expect(await credits(page)).toBe(185);
+    expect(await credits(page)).toBe(50); // 100 gratis - 50 de un modelo
   });
 
   test('F01-E3 recargar a mitad: la tarea sigue y termina', async ({ page }) => {
@@ -84,7 +84,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await expect(page.getByRole('alert').filter({ hasText: /Formato no admitido/ })).toBeVisible();
     await chooseImage(page, 'mini.png', 100);
     await expect(page.getByRole('alert').filter({ hasText: /demasiado pequeña/ })).toBeVisible();
-    expect(await credits(page)).toBe(200);
+    expect(await credits(page)).toBe(100);
   });
 
   test('F01-E6 nombre con acentos y espacios', async ({ page }) => {
@@ -117,9 +117,9 @@ test.describe('F01 imagen → modelo 3D', () => {
     await page.getByRole('button', { name: /^Generar/ }).click();
     const alert = page.getByRole('region', { name: 'Resultado' }).getByRole('alert');
     await expect(alert).toContainText('no ha podido', { timeout: 30_000 });
-    await expect(alert).toContainText('Te hemos devuelto los 15 créditos');
+    await expect(alert).toContainText('Te hemos devuelto los 50 créditos');
     await expect(alert.getByRole('button', { name: 'Reintentar' })).toBeVisible();
-    expect(await credits(page)).toBe(200);
+    expect(await credits(page)).toBe(100);
   });
 
   test('F01-N2 sesión no válida: vuelve a pedir acceso sin errores 500', async ({ page }) => {

@@ -21,7 +21,7 @@ test.describe('F02 texto → modelo 3D', () => {
     await page.getByRole('radio', { name: 'Texto' }).click();
     await page.getByRole('button', { name: /^Generar/ }).click();
     await expect(page.getByRole('alert').filter({ hasText: 'Describe el objeto que quieres crear' })).toBeVisible();
-    expect(await credits(page)).toBe(200);
+    expect(await credits(page)).toBe(100);
   });
 
   test('F02-E2 texto muy largo: se corta en 1.024', async ({ page }) => {
@@ -67,12 +67,12 @@ test.describe('F03 topología limpia', () => {
     await page.getByRole('button', { name: 'Topología' }).click();
     await page.getByRole('spinbutton', { name: 'Número de polígonos' }).fill('5000');
     await page.getByRole('radiogroup', { name: 'Variantes' }).getByRole('radio', { name: '2' }).click();
-    await expect(page.getByRole('button', { name: /^Generar.*200/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Generar.*100/ })).toBeVisible();
     await page.getByRole('button', { name: /^Generar/ }).click();
     await waitForModel(page);
     const variants = page.getByRole('region', { name: 'Resultado' }).getByRole('radiogroup', { name: 'Variantes' });
     await expect(variants.getByRole('radio')).toHaveCount(2);
-    expect(await credits(page)).toBe(2800);
+    expect(await credits(page)).toBe(2900); // 3000 - 2 variantes × 50
   });
 
   test('F03-E1 polígonos fuera de rango', async ({ page }) => {

@@ -105,6 +105,9 @@ export class Account {
     if (new URLSearchParams(location.search).get('pago') === 'ok') {
       this.toasts.show('success', 'Pago recibido. Tu plan se activa en unos segundos');
     }
+    if (new URLSearchParams(location.search).get('pack') === 'ok') {
+      this.toasts.show('success', 'Pago recibido. Tus créditos sin caducidad llegan en unos segundos');
+    }
     effect(() => {
       const me = this.gates.me();
       if (me) void this.api.ledger().then((l) => this.ledger.set(l));

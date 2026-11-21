@@ -155,17 +155,33 @@ describe('generación y créditos', () => {
     expect(await credits(env, u.h)).toMatchObject({ available: 200, frozen: 0 });
   });
 
-  it('renovación mensual: caduca lo que quede y concede 200; una devolución tardía de otro ciclo caduca', async () => {
+  it('renovación mensual: lo no gastado pasa al mes siguiente (F2); una devolución tardía de otro ciclo caduca', async () => {
     const u = await login(env);
     const t = (await env.api().post('/api/tasks').set(u.h).set('Idempotency-Key', randomUUID()).send(textTask('una taza fallo')).expect(201)).body.task;
     // la tarea se congeló en un ciclo que acaba de terminar
     await env.ctx.db.query(`update credit_accounts set monthly_cycle_ends_at = now() - interval '1 minute' where user_id = $1`, [u.id]);
     await env.ctx.db.query(`update tasks set frozen_cycle_ends_at = now() - interval '1 minute' where id = $1`, [t.id]);
     await grantFreeCredits(env.ctx);
-    expect(await credits(env, u.h)).toMatchObject({ available: 200, frozen: 15 });
+    // 185 sin gastar pasan al mes nuevo + 200 nuevos
+    expect(await credits(env, u.h)).toMatchObject({ available: 385, frozen: 15 });
     await drain(); // falla: los 15 del ciclo anterior no vuelven
-    expect(await credits(env, u.h)).toMatchObject({ available: 200, frozen: 0 });
+    expect(await credits(env, u.h)).toMatchObject({ available: 385, frozen: 0 });
+    const ledger = (await env.api().get('/api/credits/ledger').set(u.h)).body.entries as { reason: string; delta: number; note: string }[];
+    expect(ledger.filter((e) => e.reason === 'expire' && e.delta !== -15)).toEqual([]); // no caduca nada salvo la devolución tardía
+    expect(ledger.find((e) => e.reason === 'grant' && e.note.includes('185 del mes anterior'))?.delta).toBe(200);
     void t;
+  });
+
+  it('el arrastre es como mucho de un mes: lo que ya venía del mes anterior caduca', async () => {
+    const u = await login(env);
+    for (let i = 0; i < 2; i++) {
+      await env.ctx.db.query(`update credit_accounts set monthly_cycle_ends_at = now() - interval '1 minute' where user_id = $1`, [u.id]);
+      await grantFreeCredits(env.ctx);
+    }
+    // mes 1: 200 + 200 arrastrados = 400. Mes 2: solo se arrastran los 200 del último mes; los otros 200 caducan
+    expect(await credits(env, u.h)).toMatchObject({ available: 400, monthly: 400 });
+    const ledger = (await env.api().get('/api/credits/ledger').set(u.h)).body.entries as { reason: string; delta: number }[];
+    expect(ledger.filter((e) => e.reason === 'expire').map((e) => e.delta)).toEqual([-200]);
   });
 });
 

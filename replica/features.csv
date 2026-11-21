@@ -26,7 +26,7 @@ Topología quad o triángulos,generación,should,yes,partial,clon: ajuste presen
 Control de número de polígonos,generación,should,yes,yes,deslizador 500-25000 en Smart Mesh | clon: deslizador + campo; aproximado en el proveedor falso
 Prompt de textura separado,generación,should,yes,partial,si se deja vacío se usa el prompt principal | clon: UI hecha; el proveedor falso lo ignora
 Varias variantes por generación (1/2/4),generación,should,yes,yes,Smart Mesh | clon: selector de variantes en el visor
-Packs de créditos que no caducan,pagos,should,yes,no,$10 = 1000 créditos con bonus en packs grandes | clon: la bolsa permanente existe en la API falsa; falta la compra
+Packs de créditos que no caducan,pagos,should,yes,yes,"$10 = 1000 créditos con bonus en packs grandes | clon: la bolsa permanente existe en la API falsa; falta la compra | launch: 3 packs (10/30/90 €), Checkout de pago único y webhook checkout.session.completed; tests"
 Reintentar generación,generación,should,yes,yes,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no | backend: reintentos gratis por plan
 Filtros en Mis assets (texturizado / sin textura / rig),assets,should,yes,yes,S06 | clon: sin filtro de rig (no hay rig todavía)
 Exportar USDZ y 3MF,exportación,should,yes,partial,"USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor | backend: con Blender (BLENDER_PATH) | USDZ con Blender verificado; 3MF generado en el servidor sin color (solo geometría, en mm)"
@@ -49,10 +49,10 @@ Plugins DCC para Blender / Unity / Unreal / etc.,integraciones,skip,yes,skip,cad
 Agentic Canvas,generación,skip,yes,skip,producto beta aparte y fuera del bucle principal
 Modelos de imagen de terceros (Nano Banana / GPT Image / Midjourney),generación,skip,yes,skip,acuerdos y licencias con terceros
 API pública / CLI / app móvil,plataforma,skip,yes,skip,fuera del alcance web elegido
-Descarga garantizada en GLB/OBJ/STL también en Gratis (aviso previo si un formato es de pago),exportación,must,no,no,fixes.md F1; temas «gratis sin descarga» (38) y precio (62)
-Créditos mensuales que pasan al mes siguiente (máx. 1 mes),créditos,should,no,no,"fixes.md F2; tema créditos que caducan (38, 3 fuentes)"
-Cancelar en un clic sin retención y con email de confirmación,pagos,must,no,partial,fixes.md F3; temas cobros (46) y cancelación (28) | clon: portal de Stripe ya integrado; falta el email y quitar pasos
+Descarga garantizada en GLB/OBJ/STL también en Gratis (aviso previo si un formato es de pago),exportación,must,no,yes,fixes.md F1; temas «gratis sin descarga» (38) y precio (62) | launch: Gratis sin límite de descargas (migración 0003); todos los formatos
+Créditos mensuales que pasan al mes siguiente (máx. 1 mes),créditos,should,no,yes,"fixes.md F2; tema créditos que caducan (38, 3 fuentes) | launch: renewMonthly arrastra lo no gastado (máx. lo concedido el mes anterior); tests"
+Cancelar en un clic sin retención y con email de confirmación,pagos,must,no,partial,fixes.md F3; temas cobros (46) y cancelación (28) | clon: portal de Stripe ya integrado; falta el email y quitar pasos | launch: botón en Tu cuenta → portal de Stripe; falta configurar el portal sin retención (pricing.md §5)
 Reembolso automático en 48 h si no se han gastado créditos,pagos,should,no,no,fixes.md F4; tema reembolsos (14)
-Tabla pública de costes en créditos y aviso de 30 días antes de cambiarlos,pagos,should,no,partial,fixes.md F5; tema precio (62) | clon: coste visible antes de generar
+Tabla pública de costes en créditos y aviso de 30 días antes de cambiarlos,pagos,should,no,yes,fixes.md F5; tema precio (62) | clon: coste visible antes de generar | launch: /precios con coste por modelo y aviso de 30 días en /terminos
 Un reintento gratis por generación si el modelo sale mal,generación,should,no,no,fixes.md F6; tema calidad (26 + ~15 sin tema)
 Comprobación de imprimibilidad antes de descargar STL/3MF (malla cerrada / tamaño en mm),exportación,should,no,no,fixes.md F8; tema impresión 3D (17)

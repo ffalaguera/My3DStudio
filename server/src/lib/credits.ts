@@ -113,20 +113,29 @@ export async function settle(c: Tx, userId: string, taskId: string, outcome: 'co
   }
 }
 
-/** Renueva la bolsa mensual: caduca lo que quede y concede `amount`. `eventId` evita conceder dos veces. */
+/**
+ * Renueva la bolsa mensual y concede `amount`. `eventId` evita conceder dos veces.
+ * Arrastre (fixes.md F2): lo no gastado pasa al ciclo nuevo, como mucho lo que se concedió el ciclo anterior;
+ * así nada dura más de dos ciclos y el resto caduca.
+ */
 export async function renewMonthly(c: Tx, userId: string, amount: number, cycleEndsAt: Date, note: string, eventId?: string): Promise<boolean> {
   if (eventId) {
     const seen = await c.query(`select 1 from credit_ledger where stripe_event_id = $1`, [eventId]);
     if (seen.rowCount) return false;
   }
   const a = await lockAccount(c, userId);
-  if (a.monthly_balance > 0) {
-    await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note) values ($1,'monthly',$2,'expire','Fin del ciclo')`, [userId, -a.monthly_balance]);
+  const last = await c.query<{ delta: number }>(
+    `select delta from credit_ledger where user_id = $1 and bucket = 'monthly' and reason = 'grant' order by created_at desc limit 1`, [userId]);
+  const carry = Math.max(0, Math.min(a.monthly_balance, last.rows[0]?.delta ?? 0));
+  const expired = a.monthly_balance - carry;
+  if (expired > 0) {
+    await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note) values ($1,'monthly',$2,'expire','Fin del ciclo (más de un mes sin usar)')`,
+      [userId, -expired]);
   }
-  await c.query(`update credit_accounts set monthly_balance = $2, monthly_cycle_ends_at = $3 where user_id = $1`, [userId, amount, cycleEndsAt]);
+  await c.query(`update credit_accounts set monthly_balance = $2, monthly_cycle_ends_at = $3 where user_id = $1`, [userId, amount + carry, cycleEndsAt]);
   if (amount > 0) {
     await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note,stripe_event_id) values ($1,'monthly',$2,'grant',$3,$4)`,
-      [userId, amount, note, eventId ?? null]);
+      [userId, amount, carry ? `${note} (+${carry} del mes anterior)` : note, eventId ?? null]);
   }
   return true;
 }

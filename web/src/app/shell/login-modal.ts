@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Modal } from '../ui/modal';
 import { Icon } from '../ui/icon';
 import { Api, ApiError } from '../data/api';
@@ -9,12 +10,12 @@ import { Toasts } from '../ui/toast';
 /** S02: acceso y registro. Con la API falsa no hay contraseñas ni proveedores reales. */
 @Component({
   selector: 'app-login-modal',
-  imports: [Modal, Icon, FormsModule],
+  imports: [Modal, Icon, FormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-modal [open]="gates.loginOpen()" heading="Entra y empieza a crear" (closed)="gates.loginFinished(!!gates.session())">
       <p class="text-sm text-text-muted flex items-center gap-2">
-        <ui-icon name="zap" /> Al registrarte recibes 200 créditos gratis cada mes.
+        <ui-icon name="zap" /> Al registrarte recibes 100 créditos gratis cada mes: 2 modelos, con descarga incluida.
       </p>
       <button type="button" class="btn btn-secondary w-full" [disabled]="busy()" (click)="go('google')">
         <ui-icon name="chrome" /> Continuar con Google
@@ -31,7 +32,7 @@ import { Toasts } from '../ui/toast';
           @if (busy()) { <ui-icon name="loader-circle" class="animate-spin" /> Entrando… } @else { Recibir enlace de acceso }
         </button>
       </form>
-      <p class="text-xs text-text-muted">Al continuar aceptas los términos y la política de privacidad.</p>
+      <p class="text-xs text-text-muted">Al continuar aceptas los <a routerLink="/terminos" class="underline" (click)="gates.loginFinished(false)">términos</a> y la <a routerLink="/privacidad" class="underline" (click)="gates.loginFinished(false)">política de privacidad</a>.</p>
     </ui-modal>
   `,
 })

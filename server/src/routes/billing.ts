@@ -48,6 +48,27 @@ export function billingRoutes(ctx: Ctx) {
     res.json({ url: session.url });
   });
 
+  // Pack de créditos: pago único con Checkout. Los créditos llegan con checkout.session.completed.
+  r.post('/pack', async (req, res) => {
+    const stripe = requireStripe(ctx);
+    const body = z.object({ packId: z.string().max(40) }).parse(req.body);
+    const pack = await ctx.db.query('select id, stripe_price_id from credit_packs where id = $1 and is_active', [body.packId]);
+    const price = pack.rows[0]?.stripe_price_id;
+    if (!price) throw new HttpError(404, 'not_found', 'Ese pack no está a la venta');
+    const customer = await customerFor(ctx, req.user!.id, req.user!.email);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer,
+      client_reference_id: req.user!.id,
+      line_items: [{ price, quantity: 1 }],
+      metadata: { user_id: req.user!.id, pack_id: body.packId },
+      success_url: `${ctx.cfg.APP_URL}/cuenta?pack=ok`,
+      cancel_url: `${ctx.cfg.APP_URL}/precios`,
+      automatic_tax: { enabled: false },
+    });
+    res.json({ url: session.url });
+  });
+
   r.post('/portal', async (req, res) => {
     const stripe = requireStripe(ctx);
     const customer = await customerFor(ctx, req.user!.id, req.user!.email);
@@ -126,6 +147,28 @@ export async function handleStripeEvent(ctx: Ctx, event: Stripe.Event): Promise<
         const end = new Date(line.period.end * 1000);
         await renewMonthly(c, userId, plan.monthly_credits, end,
           `Plan ${plan.name} (${plan.interval === 'year' ? 'anual' : 'mensual'})`, event.id);
+        return 'processed';
+      }
+      case 'checkout.session.completed': {
+        // Solo packs (pago único). Las suscripciones se gestionan con customer.subscription.* e invoice.paid.
+        const s = event.data.object as Stripe.Checkout.Session;
+        if (s.mode !== 'payment' || s.payment_status !== 'paid') return 'ignored';
+        const userId = s.metadata?.['user_id'] ?? s.client_reference_id;
+        const packId = s.metadata?.['pack_id'];
+        if (!userId || !packId) return 'ignored';
+        const pack = (await c.query('select credits, bonus_credits, price_cents, currency from credit_packs where id = $1', [packId])).rows[0];
+        const user = await c.query('select 1 from credit_accounts where user_id = $1 for update', [userId]);
+        if (!pack || !user.rowCount) return 'ignored';
+        // El importe lo cobra Stripe, pero se comprueba aquí: solo se dan créditos si se pagó el precio del pack.
+        if (s.amount_total !== pack.price_cents || s.currency !== pack.currency) {
+          ctx.security.record({ kind: 'payment_mismatch', userId,
+            detail: `${packId}: cobrado ${s.amount_total} ${s.currency}, precio ${pack.price_cents} ${pack.currency}` });
+          return 'ignored';
+        }
+        const total = pack.credits + pack.bonus_credits;
+        await c.query('update credit_accounts set permanent_balance = permanent_balance + $2 where user_id = $1', [userId, total]);
+        await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note,stripe_event_id) values ($1,'permanent',$2,'purchase',$3,$4)`,
+          [userId, total, `Pack de ${pack.credits}${pack.bonus_credits ? ` + ${pack.bonus_credits} de regalo` : ''} créditos`, event.id]);
         return 'processed';
       }
       case 'invoice.payment_failed': {

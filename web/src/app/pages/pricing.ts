@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { Api, ApiError, PlanLimits } from '../data/api';
+import { Api, ApiError, CreditPack, PlanLimits } from '../data/api';
 import { Icon } from '../ui/icon';
 import { Modal } from '../ui/modal';
 import { Gates } from '../shell/gates';
@@ -14,8 +14,9 @@ import { Toasts } from '../ui/toast';
   template: `
     <div class="max-w-content mx-auto px-4 py-10 flex flex-col items-center gap-8">
       <div class="text-center flex flex-col gap-2">
-        <h1 class="text-xl sm:text-display">Planes</h1>
-        <p class="text-text-muted">Paga por los créditos que necesitas. Si una generación falla, no se cobra.</p>
+        <h1 class="text-xl sm:text-display">Precios claros</h1>
+        <p class="text-text-muted max-w-xl">Un modelo cuesta {{ perModel }} créditos y lo ves antes de generar. Si falla, te los devolvemos.
+          Lo que generas se descarga siempre y cancelas sin preguntas.</p>
       </div>
 
       <div role="radiogroup" aria-label="Facturación" class="seg">
@@ -30,8 +31,10 @@ import { Toasts } from '../ui/toast';
           @for (p of plans(); track p.id) {
             @let current = gates.me()?.plan?.id === p.id;
             <li class="rounded-xl bg-surface p-6 flex flex-col gap-4 relative" [class.border]="p.id === 'pro'" [class.border-highlight]="p.id === 'pro'">
-              @if (p.id === 'pro') { <span class="absolute -top-3 left-6 text-xs px-2 rounded-pill bg-highlight text-on-accent">La más elegida</span> }
-              <h2 class="text-lg">{{ p.name }}</h2>
+              <div>
+                <h2 class="text-lg">{{ p.name }}</h2>
+                <p class="text-sm text-text-muted">{{ audience[p.id] ?? '' }}</p>
+              </div>
               <p>
                 <span class="text-xl">{{ monthly(p) / 100 | currency: 'EUR' : 'symbol' : '1.0-2' : 'es' }}</span>
                 <span class="text-sm text-text-muted"> /mes</span>
@@ -40,13 +43,15 @@ import { Toasts } from '../ui/toast';
                 }
               </p>
               <ul class="text-sm text-text-muted flex flex-col gap-2 flex-1">
-                <li class="flex gap-2"><ui-icon name="zap" class="text-text" /> {{ p.monthlyCredits | number: '1.0-0' : 'es' }} créditos al mes</li>
+                <li class="flex gap-2"><ui-icon name="zap" class="text-text" /> {{ p.monthlyCredits | number: '1.0-0' : 'es' }} créditos al mes (≈ {{ p.monthlyCredits / perModel | number: '1.0-0' : 'es' }} modelos)</li>
+                <li class="flex gap-2"><ui-icon name="history" class="text-text" /> Lo que no gastes pasa al mes siguiente</li>
                 <li class="flex gap-2"><ui-icon name="layers" class="text-text" /> {{ p.maxConcurrentTasks }} {{ p.maxConcurrentTasks === 1 ? 'tarea' : 'tareas' }} a la vez</li>
                 <li class="flex gap-2"><ui-icon [name]="p.allowSmartMesh ? 'check' : 'minus'" class="text-text" /> Topología limpia{{ p.allowSmartMesh ? '' : ' (no incluida)' }}</li>
                 <li class="flex gap-2"><ui-icon name="image" class="text-text" /> Texturas hasta {{ p.maxTextureResolution.toUpperCase() }}</li>
                 <li class="flex gap-2"><ui-icon [name]="p.allowPrivate ? 'lock' : 'globe'" class="text-text" /> {{ p.allowPrivate ? 'Modelos privados y uso comercial' : 'Modelos públicos, con atribución' }}</li>
                 <li class="flex gap-2"><ui-icon name="history" class="text-text" /> Historial {{ p.historyDays === null ? 'permanente' : p.historyDays === 1 ? 'de 1 día' : 'de ' + p.historyDays + ' días' }}</li>
-                <li class="flex gap-2"><ui-icon name="download" class="text-text" /> {{ p.monthlyExportLimit === null ? 'Exportaciones ilimitadas' : p.monthlyExportLimit + ' exportaciones al mes' }}</li>
+                <li class="flex gap-2"><ui-icon name="download" class="text-text" /> {{ p.monthlyExportLimit === null ? 'Descargas incluidas, sin límite' : p.monthlyExportLimit + ' descargas al mes' }}</li>
+                @if (p.priceMonthCents) { <li class="flex gap-2"><ui-icon name="x" class="text-text" /> Cancelas desde tu cuenta, sin preguntas</li> }
               </ul>
               @if (current) {
                 <button type="button" class="btn btn-secondary" disabled>Tu plan</button>
@@ -59,7 +64,27 @@ import { Toasts } from '../ui/toast';
           }
         </ul>
       }
-      <p class="hint text-center">Precios provisionales. Impuestos incluidos.</p>
+      <section aria-labelledby="packs-title" class="w-full flex flex-col gap-4">
+        <div class="text-center flex flex-col gap-1">
+          <h2 id="packs-title" class="text-lg">¿Solo necesitas unos pocos modelos?</h2>
+          <p class="text-sm text-text-muted">Compra créditos una vez, sin suscripción. No caducan nunca.</p>
+        </div>
+        <ul class="grid sm:grid-cols-3 gap-4">
+          @for (k of packs(); track k.id) {
+            <li class="rounded-xl bg-surface p-5 flex flex-col gap-3">
+              <p class="text-lg">{{ k.credits + k.bonusCredits | number: '1.0-0' : 'es' }} créditos</p>
+              <p class="text-sm text-text-muted">≈ {{ (k.credits + k.bonusCredits) / perModel | number: '1.0-0' : 'es' }} modelos
+                @if (k.bonusCredits) { · incluye {{ k.bonusCredits | number: '1.0-0' : 'es' }} de regalo }</p>
+              <p class="text-xl">{{ k.priceCents / 100 | currency: 'EUR' : 'symbol' : '1.0-0' : 'es' }}</p>
+              <button type="button" class="btn btn-secondary" [disabled]="busyPack() === k.id" [attr.aria-busy]="busyPack() === k.id" (click)="buyPack(k)">
+                @if (busyPack() === k.id) { <ui-icon name="loader-circle" class="animate-spin" /> Procesando… } @else { Comprar }
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <p class="hint text-center">IVA incluido. Anual = 10 meses: pagas 10 y usas 12. Te avisamos con 30 días si algún precio cambia.</p>
     </div>
 
     <ui-modal [open]="!!buying()" heading="Pago simulado" (closed)="buying.set(null)">
@@ -84,9 +109,34 @@ export class Pricing {
   protected readonly buying = signal<PlanLimits | null>(null);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
+  protected readonly packs = signal<CreditPack[]>([]);
+  protected readonly busyPack = signal<string | null>(null);
+  /** Créditos de un modelo de alto detalle (CREDITS_HD del servidor). */
+  protected readonly perModel = 50;
+  protected readonly audience: Record<string, string> = {
+    free: 'Para probar con tus propias fotos',
+    pro: 'Para quien crea a menudo: impresión 3D, juegos, AR',
+    max: 'Para equipos y estudios con volumen',
+  };
 
   constructor() {
     void this.api.plans().then((p) => this.plans.set(p));
+    void this.api.creditPacks().then((k) => this.packs.set(k)).catch(() => this.packs.set([]));
+  }
+
+  protected async buyPack(k: CreditPack): Promise<void> {
+    if (!(await this.gates.ensureSignedIn())) return;
+    const { billing } = await this.api.capabilities();
+    if (billing === 'off' || !k.purchasable) return this.toasts.show('info', 'Los pagos se activan pronto. De momento puedes usar el plan Gratis');
+    this.busyPack.set(k.id);
+    try {
+      await this.api.buyPack(k.id); // Stripe Checkout (en la demo, pago simulado)
+      if (billing === 'simulated') this.toasts.show('success', `Has sumado ${k.credits + k.bonusCredits} créditos que no caducan`, { label: 'Crear', link: '/crear' });
+    } catch (e) {
+      this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido abrir el pago');
+    } finally {
+      this.busyPack.set(null);
+    }
   }
 
   protected monthly(p: PlanLimits): number {

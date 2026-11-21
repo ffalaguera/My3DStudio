@@ -25,6 +25,12 @@ export async function makeEnv() {
     STRIPE_SECRET_KEY: 'sk_test_solo_para_firmas',
     STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
     PROVIDER_MAX_CONCURRENCY: '50',
+    // Precios de prueba fijos: los tests comprueban la lógica (congelar, devolver, renovar), no la tarifa.
+    // La tarifa real está en la migración 0003 y en los valores por defecto de config.ts.
+    CREDITS_HD: '15',
+    CREDITS_TEXTURE_4K: '10',
+    CREDITS_TEXTURE_8K: '20',
+    CREDITS_SMART_PER_VARIANT: '100',
   });
   const sent: { to: string; t: Template }[] = [];
   const ctx: Ctx = createCtx(cfg, {
@@ -32,6 +38,8 @@ export async function makeEnv() {
     stripe: new Stripe(cfg.STRIPE_SECRET_KEY!),
   });
   await migrate(ctx.db, { local: true });
+  await ctx.db.query(`update plans set monthly_credits = case id when 'free' then 200 when 'pro' then 3000 else monthly_credits end,
+                        monthly_export_limit = case id when 'free' then 15 else monthly_export_limit end`);
   const app = createApp(ctx);
   return { cfg, ctx, app, sent, api: () => request(app) };
 }

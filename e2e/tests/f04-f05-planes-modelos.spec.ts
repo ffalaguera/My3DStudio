@@ -19,19 +19,19 @@ test.describe('F04 créditos y planes', () => {
     await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
     await page.getByRole('button', { name: /^Generar/ }).click();
     const dialog = page.getByRole('dialog', { name: 'No tienes créditos suficientes' });
-    await expect(dialog).toContainText('Te faltan 5 créditos');
+    await expect(dialog).toContainText('Te faltan 40 créditos');
     await dialog.getByRole('button', { name: 'Ver planes' }).click();
     await expect(page).toHaveURL(/\/precios/);
   });
 
   test('F04-H1 + F04-E1 precios: mensual/anual y pagos sin configurar', async ({ page }) => {
     await page.goto('/precios');
-    await expect(page.getByRole('heading', { name: 'Planes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Precios claros' })).toBeVisible();
     expect(await a11y(page), 'axe S10').toEqual([]);
-    await expect(page.getByRole('listitem').filter({ hasText: 'Pro' }).getByText('13 €')).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Creador' }).getByText('12,5 €')).toBeVisible();
     await page.getByRole('radio', { name: 'Mensual' }).click();
-    await expect(page.getByRole('listitem').filter({ hasText: 'Pro' }).getByText('19 €')).toBeVisible();
-    await page.getByRole('button', { name: 'Elegir Pro' }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Creador' }).getByText('15 €')).toBeVisible();
+    await page.getByRole('button', { name: 'Elegir Creador' }).click();
     await signIn(page); // tras entrar, la elección del plan continúa sola
     await expect(page.getByRole('status').filter({ hasText: 'Los pagos se activan pronto' })).toBeVisible();
   });

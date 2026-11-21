@@ -1,0 +1,17 @@
+{
+  "_nota": "My3DStudio es solo web por ahora (alcance elegido en recon). Esta ficha queda preparada para una futura app o PWA en tiendas; no se publica todavía.",
+  "avoid": ["Tripo", "Tripo3D", "Tripo Studio", "HOLYMOLLY", "VAST AI"],
+  "app_store": {
+    "name": "My3DStudio: foto a modelo 3D",
+    "subtitle": "Paga solo lo que generas",
+    "promotional_text": "Convierte una foto en un modelo 3D. Ves el coste antes de generar, la descarga va incluida y, si falla, recuperas tus créditos.",
+    "description": "My3DStudio convierte una foto o una frase en un modelo 3D con texturas.\n\nSube una imagen, mira cuántos créditos cuesta y genera. Si la generación falla o la cancelas, los créditos vuelven a tu saldo. Lo que creas se descarga siempre, también en el plan Gratis.\n\nQué puedes hacer:\n- Imagen a 3D y texto a 3D\n- Alto detalle o topología limpia con control de polígonos\n- Visor 3D con órbita, zoom e iluminación\n- Descarga en GLB, OBJ, STL, 3MF, FBX y USDZ\n- Biblioteca con búsqueda y modelos privados en los planes de pago\n\nCréditos claros:\n- El coste se ve antes de generar\n- Lo que no gastas un mes pasa al siguiente\n- Packs de créditos que no caducan\n- Cancelas desde tu cuenta, sin preguntas\n\nGratis: 2 modelos al mes. Creador: 15 € al mes, unos 30 modelos.",
+    "keywords": "generador,ia,impresion,stl,glb,obj,escultura,juegos,ar,fbx,usdz,malla,figura,miniatura,render",
+    "whats_new": "Packs de créditos sin caducidad y créditos que pasan al mes siguiente."
+  },
+  "google_play": {
+    "title": "My3DStudio: foto a 3D",
+    "short_description": "Convierte una foto en un modelo 3D. Coste visible y descarga incluida.",
+    "full_description": "My3DStudio convierte una foto o una frase en un modelo 3D con texturas.\n\nSube una imagen, mira cuántos créditos cuesta y genera. Si la generación falla o la cancelas, los créditos vuelven a tu saldo. Lo que creas se descarga siempre, también en el plan Gratis.\n\nDescarga en GLB, OBJ, STL, 3MF, FBX y USDZ. Lo que no gastas un mes pasa al siguiente y los packs de créditos no caducan. Cancelas desde tu cuenta, sin preguntas.\n\nGratis: 2 modelos al mes. Creador: 15 € al mes, unos 30 modelos."
+  }
+}

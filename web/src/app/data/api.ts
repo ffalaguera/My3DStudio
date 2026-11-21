@@ -153,6 +153,16 @@ export interface Capabilities {
   billing: 'simulated' | 'stripe' | 'off';
 }
 
+/** Pack de créditos sin caducidad (pago único). */
+export interface CreditPack {
+  id: string;
+  credits: number;
+  bonusCredits: number;
+  priceCents: number;
+  currency: string;
+  purchasable: boolean;
+}
+
 export abstract class Api {
   abstract capabilities(): Promise<Capabilities>;
 
@@ -187,6 +197,9 @@ export abstract class Api {
 
   // /billing (Stripe Checkout en el real)
   abstract checkout(planId: string, interval: 'month' | 'year'): Promise<void>;
+  abstract creditPacks(): Promise<CreditPack[]>;
+  /** Pago único de un pack: los créditos se suman a la bolsa permanente y no caducan. */
+  abstract buyPack(packId: string): Promise<void>;
   /** Customer Portal de Stripe: cambiar tarjeta, plan o cancelar en un clic. */
   abstract billingPortal(): Promise<void>;
   abstract deleteAccount(): Promise<void>;

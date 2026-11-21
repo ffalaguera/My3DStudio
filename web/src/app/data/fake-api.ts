@@ -2,7 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, distinctUntilChanged, filter, map } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  PlanLimits, Privacy, Profile, Task, Upload,
+  CreditPack, PlanLimits, Privacy, Profile, Task, Upload,
 } from './api';
 import type { ModelSpec } from './fake-model';
 import type * as THREE from 'three';
@@ -38,17 +38,23 @@ const STORE_KEY = 'my3dstudio:fake-api:v1';
 const TICK_MS = 400;
 const DEMO_SECONDS = { hd: 18, smart: 8 } as const;
 
-// Precios PROVISIONALES: se fijan en /replica-launch.
+// Tarifa de lanzamiento (replica/launch/pricing.md); igual que la migración 0003 del servidor.
 const PLANS: PlanLimits[] = [
-  { id: 'free', name: 'Gratis', priceMonthCents: 0, priceYearCents: 0, currency: 'eur', monthlyCredits: 200,
-    maxConcurrentTasks: 1, maxVariants: 1, monthlyExportLimit: 15, maxSavedModels: 10, historyDays: 1,
+  { id: 'free', name: 'Gratis', priceMonthCents: 0, priceYearCents: 0, currency: 'eur', monthlyCredits: 100,
+    maxConcurrentTasks: 1, maxVariants: 1, monthlyExportLimit: null, maxSavedModels: 10, historyDays: 1,
     maxTextureResolution: '2k', allowPrivate: false, allowCommercial: false, allowSmartMesh: false },
-  { id: 'pro', name: 'Pro', priceMonthCents: 1900, priceYearCents: 15600, currency: 'eur', monthlyCredits: 3000,
-    maxConcurrentTasks: 10, maxVariants: 4, monthlyExportLimit: null, maxSavedModels: null, historyDays: 7,
+  { id: 'pro', name: 'Creador', priceMonthCents: 1500, priceYearCents: 15000, currency: 'eur', monthlyCredits: 1500,
+    maxConcurrentTasks: 5, maxVariants: 4, monthlyExportLimit: null, maxSavedModels: null, historyDays: 7,
     maxTextureResolution: '4k', allowPrivate: true, allowCommercial: true, allowSmartMesh: true },
-  { id: 'max', name: 'Max', priceMonthCents: 7900, priceYearCents: 64800, currency: 'eur', monthlyCredits: 25000,
-    maxConcurrentTasks: 100, maxVariants: 4, monthlyExportLimit: null, maxSavedModels: null, historyDays: null,
+  { id: 'max', name: 'Estudio', priceMonthCents: 4900, priceYearCents: 49000, currency: 'eur', monthlyCredits: 5000,
+    maxConcurrentTasks: 20, maxVariants: 4, monthlyExportLimit: null, maxSavedModels: null, historyDays: null,
     maxTextureResolution: '8k', allowPrivate: true, allowCommercial: true, allowSmartMesh: true },
+];
+
+const PACKS: CreditPack[] = [
+  { id: 'pack_800', credits: 800, bonusCredits: 0, priceCents: 1000, currency: 'eur', purchasable: true },
+  { id: 'pack_2600', credits: 2400, bonusCredits: 200, priceCents: 3000, currency: 'eur', purchasable: true },
+  { id: 'pack_9000', credits: 8000, bonusCredits: 1000, priceCents: 9000, currency: 'eur', purchasable: true },
 ];
 
 interface StoredTask extends Task {
@@ -236,9 +242,9 @@ export class FakeApi extends Api implements OnDestroy {
 
   // ------------------------------------------------------------------ tareas
   private cost(req: Pick<CreateTaskRequest, 'series' | 'params'>): number {
-    if (req.series === 'smart') return 100 * req.params.variants;
+    if (req.series === 'smart') return 50 * req.params.variants;
     const tex = req.params.texture ? { '2k': 0, '4k': 10, '8k': 20 }[req.params.textureResolution] : 0;
-    return 15 + tex;
+    return 50 + tex;
   }
 
   async estimate(req: Omit<CreateTaskRequest, 'idempotencyKey'>): Promise<Estimate> {
@@ -520,18 +526,36 @@ export class FakeApi extends Api implements OnDestroy {
     if (!plan) throw new ApiError(404, 'not_found', 'Ese plan no existe');
     await sleep(700);
     this.commit((s) => {
-      // como invoice.paid: caduca la bolsa mensual y concede la del plan nuevo
-      if (s.credits.monthly) {
-        this.ledgerAdd(s, { delta: -s.credits.monthly, bucket: 'monthly', reason: 'expire', note: 'Cambio de plan' });
+      // como invoice.paid: lo no gastado se arrastra (máx. lo concedido el mes anterior) y se concede el plan nuevo
+      const prev = PLANS.find((p) => p.id === s.planId)?.monthlyCredits ?? 0;
+      const carry = Math.min(s.credits.monthly, prev);
+      if (s.credits.monthly > carry) {
+        this.ledgerAdd(s, { delta: carry - s.credits.monthly, bucket: 'monthly', reason: 'expire', note: 'Fin del ciclo (más de un mes sin usar)' });
       }
       s.planId = plan.id;
-      s.credits.monthly = plan.monthlyCredits;
+      s.credits.monthly = plan.monthlyCredits + carry;
       s.credits.cycleEndsAt = (interval === 'year'
         ? new Date(Date.now() + 30 * 86400000) : nextCycle()).toISOString();
       this.ledgerAdd(s, { delta: plan.monthlyCredits, bucket: 'monthly', reason: 'grant',
         note: `Plan ${plan.name} (${interval === 'year' ? 'anual' : 'mensual'}) · pago simulado` });
       const h = plan.historyDays;
       for (const a of s.assets) a.expiresAt = h ? new Date(new Date(a.createdAt).getTime() + h * 86400000).toISOString() : null;
+    });
+  }
+
+  async creditPacks(): Promise<CreditPack[]> {
+    return PACKS;
+  }
+
+  async buyPack(packId: string): Promise<void> {
+    this.requireUser();
+    const pack = PACKS.find((p) => p.id === packId);
+    if (!pack) throw new ApiError(404, 'not_found', 'Ese pack no está a la venta');
+    await sleep(700);
+    this.commit((s) => {
+      const total = pack.credits + pack.bonusCredits;
+      s.credits.permanent += total;
+      this.ledgerAdd(s, { delta: total, bucket: 'permanent', reason: 'purchase', note: `Pack de ${pack.credits} créditos · pago simulado` });
     });
   }
 

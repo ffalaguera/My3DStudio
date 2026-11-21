@@ -17,12 +17,26 @@ export function accountRoutes(ctx: Ctx, auth: ReturnType<typeof import('../lib/a
       exportFormats: ctx.cfg.BLENDER_PATH ? ['glb', 'obj', 'stl', '3mf', 'usdz', 'fbx'] : ['glb', 'obj', 'stl', '3mf'],
       billing: !!ctx.stripe,
       localAuth: ctx.cfg.LOCAL_AUTH,
+      // Solo en desarrollo: deja que los e2e se nieguen a correr contra el motor de pago.
+      ...(ctx.cfg.LOCAL_AUTH ? { engine: ctx.cfg.GENERATION_PROVIDER === 'fake' ? 'demo' : 'real' } : {}),
     });
   });
 
   r.get('/plans', async (_req, res) => {
     const rows = await db.query<PlanRow>('select * from plans where is_public order by sort_order');
     res.json({ plans: rows.rows.map(ser.plan) });
+  });
+
+  // Packs de créditos sin caducidad (fixes.md F2). Público, como los planes.
+  r.get('/credit-packs', async (_req, res) => {
+    const rows = await db.query<{ id: string; credits: number; bonus_credits: number; price_cents: number; currency: string; stripe_price_id: string | null }>(
+      'select id, credits, bonus_credits, price_cents, currency, stripe_price_id from credit_packs where is_active order by price_cents');
+    res.json({
+      packs: rows.rows.map((p) => ({
+        id: p.id, credits: p.credits, bonusCredits: p.bonus_credits, priceCents: p.price_cents, currency: p.currency,
+        purchasable: !!p.stripe_price_id,
+      })),
+    });
   });
 
   // Solo desarrollo y tests: entra con cualquier email (crea el usuario en auth.users local).
