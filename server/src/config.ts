@@ -55,6 +55,8 @@ const schema = z
     // Freno de gasto: como mucho N llamadas al motor por día (UTC). Las demás esperan en cola al día siguiente.
     // Con fal ≈ 0,28 € por modelo: 20/día ≈ 5,60 € como máximo. 0 = sin tope.
     GENERATION_DAILY_LIMIT: z.coerce.number().int().min(0).default(20),
+    // Vista previa (solo la imagen, ≈ 0,003 € con fal): tope por persona y día para que no se use como generador de imágenes gratis
+    PREVIEW_DAILY_LIMIT: z.coerce.number().int().min(0).default(30),
     BLENDER_PATH: z.string().optional(),
   })
   .superRefine((c, ctx) => {

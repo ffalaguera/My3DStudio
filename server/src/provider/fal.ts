@@ -130,6 +130,26 @@ export class FalProvider implements GenerationProvider {
     return new ProviderError('El motor no ha podido reconstruir este objeto. Te hemos devuelto los créditos', st.error_type === 'runner_server_error');
   }
 
+  /** Texto → imagen de referencia (traducción al inglés + FLUX con filtro de contenido). Devuelve la URL en fal. */
+  private async textImage(prompt: string, signal: AbortSignal, tick: (to: number) => Promise<void> = async () => {}): Promise<string> {
+    const english = await this.translate(prompt, signal);
+    await tick(3);
+    const img = await this.run<{ images: { url: string }[]; has_nsfw_concepts?: boolean[] }>(this.textToImage, {
+      prompt: `${english}. ${REFERENCE_STYLE}`, image_size: 'square_hd', num_images: 1,
+      enable_safety_checker: true, output_format: 'png',
+    }, signal, async (s) => tick(s.status === 'IN_PROGRESS' ? 8 : 4));
+    if (img.has_nsfw_concepts?.[0]) throw new ProviderError('La descripción no está permitida. No se ha cobrado nada');
+    if (!img.images?.[0]?.url) throw new ProviderError('No se ha podido crear la imagen de referencia');
+    return img.images[0].url;
+  }
+
+  async referenceImage(prompt: string, signal: AbortSignal): Promise<{ bytes: Buffer; contentType: 'image/png' }> {
+    const url = await this.textImage(prompt, signal);
+    const bytes = await this.download(url, signal, 20 * 1024 * 1024);
+    if (bytes.readUInt32BE(0) !== 0x89504e47) throw new ProviderError('No se ha podido crear la imagen de referencia');
+    return { bytes, contentType: 'image/png' };
+  }
+
   private async download(url: string, signal: AbortSignal, max: number): Promise<Buffer> {
     // solo se descarga de fal (o de la URL base en los tests): evita que una respuesta manipulada haga
     // que el servidor pida URLs internas o de terceros
@@ -194,15 +214,7 @@ export class FalProvider implements GenerationProvider {
 
     if (input.type === 'text_to_model') {
       // 1) traducir al inglés y crear la imagen de referencia (≈ 10 % del tiempo)
-      const english = await this.translate(input.prompt ?? '', signal);
-      await tick(3);
-      const img = await this.run<{ images: { url: string }[]; has_nsfw_concepts?: boolean[] }>(this.textToImage, {
-        prompt: `${english}. ${REFERENCE_STYLE}`, image_size: 'square_hd', num_images: 1,
-        enable_safety_checker: true, output_format: 'png',
-      }, signal, async (s) => tick(s.status === 'IN_PROGRESS' ? 8 : 4));
-      if (img.has_nsfw_concepts?.[0]) throw new ProviderError('La descripción no está permitida. No se ha cobrado nada');
-      if (!img.images?.[0]?.url) throw new ProviderError('No se ha podido crear la imagen de referencia');
-      imageUrl = img.images[0].url;
+      imageUrl = await this.textImage(input.prompt ?? '', signal, tick);
       await tick(10);
     } else {
       if (!input.image) throw new ProviderError('Falta la imagen de entrada');

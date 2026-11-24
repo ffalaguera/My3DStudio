@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Ctx } from '../context.js';
 import { tx } from '../db.js';
 import { planOf } from '../lib/credits.js';
-import { convert, CONTENT_TYPE, type Format } from '../lib/convert.js';
+import { convert, convertForPrint, CONTENT_TYPE, printReport, type Format, type PrintReport } from '../lib/convert.js';
 import { HttpError, uuid } from '../lib/http.js';
 import * as ser from '../lib/serialize.js';
 import { assertOwner } from './account.js';
@@ -61,7 +61,13 @@ export function assetRoutes(ctx: Ctx) {
   /** Devuelve una URL firmada de descarga. Convierte el formato si aún no existe. Cuenta para el límite del plan. */
   r.post('/:id/export', async (req, res) => {
     const id = uuid.parse(req.params.id);
-    const { format } = z.object({ format: z.enum(['glb', 'obj', 'stl', 'usdz', 'fbx', '3mf']) }).parse(req.body);
+    const { format, print } = z.object({
+      format: z.enum(['glb', 'obj', 'stl', 'usdz', 'fbx', '3mf']),
+      // kit de impresión: altura final en mm y peana. Solo STL y 3MF
+      print: z.object({ heightMm: z.number().int().min(10).max(400), base: z.boolean().default(false) }).optional(),
+    }).refine((b) => !b.print || b.format === 'stl' || b.format === '3mf', { path: ['print'], message: 'Las opciones de impresión son para STL y 3MF' })
+      .parse(req.body);
+    const optionsHash = print ? `h${print.heightMm}-b${print.base ? 1 : 0}` : 'default';
     const userId = req.user!.id;
     const a = await db.query('select name from assets where id = $1 and user_id = $2', [id, userId]);
     assertOwner(a);
@@ -81,26 +87,38 @@ export function assetRoutes(ctx: Ctx) {
     const safe = (a.rows[0].name as string).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'modelo';
     const filename = `${safe}.${format}`;
     let key = (await db.query(
-      `select storage_key from asset_files where asset_id = $1 and format = $2 and options_hash = 'default'`, [id, format])).rows[0]?.storage_key as string | undefined;
+      `select storage_key from asset_files where asset_id = $1 and format = $2 and options_hash = $3`, [id, format, optionsHash])).rows[0]?.storage_key as string | undefined;
+    let printInfo: PrintReport | undefined;
+    const readGlb = async () => {
+      const k = (await db.query(`select storage_key from asset_files where asset_id = $1 and format = 'glb' and options_hash = 'default'`, [id])).rows[0]?.storage_key;
+      if (!k) throw new HttpError(409, 'not_ready', 'El modelo aún no está listo');
+      return storage.read(k as string);
+    };
+    if (key && print) printInfo = await printReport(await readGlb(), print);
     if (!key) {
-      const glbKey = (await db.query(`select storage_key from asset_files where asset_id = $1 and format = 'glb'`, [id])).rows[0]?.storage_key;
-      if (!glbKey) throw new HttpError(409, 'not_ready', 'El modelo aún no está listo');
       let out: Buffer;
       try {
-        out = await convert(await storage.read(glbKey), format as Format, cfg.BLENDER_PATH);
+        const glb = await readGlb();
+        if (print) {
+          const r = await convertForPrint(glb, format as 'stl' | '3mf', print);
+          out = r.bytes;
+          printInfo = r.report;
+        } else {
+          out = await convert(glb, format as Format, cfg.BLENDER_PATH);
+        }
       } catch (e) {
         // si la conversión falla, la exportación no cuenta para el límite
         await db.query(`delete from exports where id = (select id from exports where user_id = $1 and asset_id = $2 order by created_at desc limit 1)`, [userId, id]);
         throw e;
       }
-      key = `u/${userId}/assets/${id}/model.${format}`;
+      key = `u/${userId}/assets/${id}/model${print ? `-${optionsHash}` : ''}.${format}`;
       await storage.write(key, out, CONTENT_TYPE[format as Format]);
       await db.query(
-        `insert into asset_files (asset_id, format, storage_key, size_bytes) values ($1,$2,$3,$4) on conflict do nothing`,
-        [id, format, key, out.length]);
+        `insert into asset_files (asset_id, format, options_hash, storage_key, size_bytes) values ($1,$2,$3,$4,$5) on conflict do nothing`,
+        [id, format, optionsHash, key, out.length]);
     }
     // en la URL va un nombre genérico (sin datos del usuario); el bonito lo pone el navegador con `filename`
-    res.json({ url: await storage.signedGet(key, `modelo-${id.slice(0, 8)}.${format}`, 600), filename });
+    res.json({ url: await storage.signedGet(key, `modelo-${id.slice(0, 8)}.${format}`, 600), filename, ...(printInfo ? { print: printInfo } : {}) });
   });
 
   return r;

@@ -1,12 +1,16 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Ctx } from '../context.js';
 import { notifyTask, tx, type Tx } from '../db.js';
-import { freeze, settle } from '../lib/credits.js';
+import { costOf, freeze, settle } from '../lib/credits.js';
 import { HttpError, uuid } from '../lib/http.js';
+import { sniffImage } from '../lib/image.js';
 import { estimateSchema, evaluate, taskRequestSchema, type TaskRequest } from '../lib/rules.js';
 import * as ser from '../lib/serialize.js';
+import { ProviderError } from '../provider/provider.js';
 import { assertOwner } from './account.js';
+import { createProvider } from '../jobs/worker.js';
 
 const idemKey = z.string().min(8).max(100);
 
@@ -60,6 +64,61 @@ export function taskRoutes(ctx: Ctx) {
     const id = await tx(db, (c) => createTask(c, req.user!.id, body, key));
     const [task] = await ser.tasks(db, storage, 't.id = $1 and t.user_id = $2', [id, req.user!.id]);
     res.status(201).json({ task });
+  });
+
+  /**
+   * Vista previa antes de pagar: solo la imagen de referencia de un texto. No cobra créditos, pero exige saldo para un
+   * modelo y tiene tope diario. Si se aprueba, el modelo se pide como image_to_model con esta subida (precio normal).
+   */
+  r.post('/preview', async (req, res) => {
+    const { prompt } = z.object({ prompt: z.string().trim().min(1, 'Describe el objeto').max(1024) }).parse(req.body);
+    const userId = req.user!.id;
+    const id = randomUUID();
+    const key = `u/${userId}/uploads/${id}.png`;
+    await tx(db, async (c) => {
+      await c.query('select 1 from credit_accounts where user_id = $1 for update', [userId]);
+      const blocked = await c.query('select blocked_at from profiles where id = $1', [userId]);
+      if (blocked.rows[0]?.blocked_at) {
+        throw new HttpError(403, 'account_blocked', 'Tu cuenta está bloqueada por una incidencia con un pago. Escríbenos para resolverlo');
+      }
+      const need = costOf('hd', { texture: true, textureResolution: '2k', variants: 1 });
+      const acc = (await c.query('select monthly_balance + permanent_balance as available from credit_accounts where user_id = $1', [userId])).rows[0];
+      const available = Number(acc?.available ?? 0);
+      if (available < need) {
+        throw new HttpError(402, 'insufficient_credits', `Para ver la imagen necesitas saldo para un modelo (${need} créditos). Te faltan ${need - available}`);
+      }
+      const limit = ctx.cfg.PREVIEW_DAILY_LIMIT;
+      if (limit > 0) {
+        const used = Number((await c.query(
+          `select count(*) from uploads where user_id = $1 and source = 'preview' and created_at >= date_trunc('day', now())`, [userId])).rows[0].count);
+        if (used >= limit) throw new HttpError(429, 'preview_limit', `Has visto ${limit} imágenes hoy. Mañana puedes ver más`);
+      }
+      // la fila se crea antes de llamar al motor para que dos peticiones a la vez no pasen del tope
+      await c.query(
+        `insert into uploads (id, user_id, kind, storage_key, content_type, size_bytes, source, filename)
+         values ($1,$2,'image',$3,'image/png',1,'preview','vista-previa.png')`, [id, userId, key]);
+    });
+    const ac = new AbortController();
+    req.on('close', () => { if (!res.writableEnded) ac.abort(); });
+    let img: { bytes: Buffer };
+    try {
+      img = await createProvider(ctx).referenceImage(prompt, ac.signal);
+    } catch (e) {
+      await db.query(`update uploads set status = 'rejected' where id = $1`, [id]);
+      if (!(e instanceof ProviderError)) console.error('[preview] fallo', (e as Error).message);
+      throw new HttpError(502, 'preview_failed', e instanceof ProviderError ? e.message : 'No se ha podido crear la imagen. Prueba otra vez');
+    }
+    const info = sniffImage(img.bytes);
+    if (!info || info.type !== 'image/png') {
+      await db.query(`update uploads set status = 'rejected' where id = $1`, [id]);
+      throw new HttpError(502, 'preview_failed', 'No se ha podido crear la imagen');
+    }
+    await storage.write(key, img.bytes, 'image/png');
+    await db.query(`update uploads set status = 'ready', width = $2, height = $3, size_bytes = $4 where id = $1`,
+      [id, info.width, info.height, img.bytes.length]);
+    res.status(201).json({
+      upload: { id, previewUrl: await storage.signedGet(key), width: info.width, height: info.height, sizeBytes: img.bytes.length },
+    });
   });
 
   r.get('/', async (req, res) => {

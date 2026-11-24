@@ -2,7 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, distinctUntilChanged, filter, map } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  CreditPack, PlanLimits, Privacy, Profile, Task, Upload,
+  CreditPack, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
 } from './api';
 import type { ModelSpec } from './fake-model';
 import type * as THREE from 'three';
@@ -507,8 +507,32 @@ export class FakeApi extends Api implements OnDestroy {
     this.commit((s) => (s.assets = s.assets.filter((a) => a.id !== assetId)));
   }
 
-  async exportAsset(assetId: string, format: ExportFormat): Promise<{ url: string; filename: string }> {
+  /** Modo sin servidor: un disco de color según el texto (lo que hace el motor de demostración). */
+  async previewImage(prompt: string): Promise<Upload> {
     this.requireUser();
+    let h = 0;
+    for (const ch of prompt) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#f0eee8';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = `hsl(${h % 360} 45% 55%)`;
+    ctx.beginPath();
+    ctx.arc(256, 256, 174, 0, Math.PI * 2);
+    ctx.fill();
+    await sleep(300);
+    const up: StoredUpload = {
+      id: id(), previewUrl: c.toDataURL('image/png'), width: 512, height: 512, sizeBytes: 0,
+      color: `hsl(${h % 360} 45% 55%)`, name: 'vista-previa.png',
+    };
+    this.commit((s) => { s.uploads = [up, ...s.uploads].slice(0, 20); });
+    return up;
+  }
+
+  async exportAsset(assetId: string, format: ExportFormat, print?: PrintOptions): Promise<{ url: string; filename: string; print?: PrintReport }> {
+    this.requireUser();
+    if (print) throw new ApiError(501, 'server_conversion', 'Preparar para imprimir se hace en el servidor');
     const a = this.s.assets.find((x) => x.id === assetId);
     if (!a) throw new ApiError(404, 'not_found', 'Este modelo ya no existe');
     const plan = this.plan();

@@ -58,6 +58,16 @@ export interface Upload {
   sizeBytes: number;
 }
 
+export interface PrintOptions { heightMm: number; base: boolean }
+export interface PrintReport {
+  heightMm: number;
+  base: boolean;
+  sizeMm: { x: number; y: number; z: number };
+  triangles: number;
+  watertight: boolean;
+  openEdges: number;
+}
+
 export interface GenerationParams {
   textureResolution: TextureResolution;
   pbr: boolean;
@@ -195,7 +205,10 @@ export abstract class Api {
   abstract asset(id: string): Promise<Asset>;
   abstract updateAsset(id: string, patch: { name?: string; privacy?: Privacy }): Promise<Asset>;
   abstract deleteAsset(id: string): Promise<void>;
-  abstract exportAsset(id: string, format: ExportFormat): Promise<{ url: string; filename: string }>;
+  /** STL y 3MF admiten `print`: altura final en mm y peana. Entonces vuelve también el informe de impresión. */
+  abstract exportAsset(id: string, format: ExportFormat, print?: PrintOptions): Promise<{ url: string; filename: string; print?: PrintReport }>;
+  /** Vista previa antes de pagar: la imagen de referencia de un texto, sin gastar créditos. */
+  abstract previewImage(prompt: string): Promise<Upload>;
 
   // /billing (Stripe Checkout en el real)
   abstract checkout(planId: string, interval: 'month' | 'year'): Promise<void>;

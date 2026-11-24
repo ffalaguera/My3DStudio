@@ -95,8 +95,8 @@ function toStl(tris: Tri[]): Buffer {
  * 3MF para impresión 3D, generado aquí (Blender 4.5 ya no trae exportador de 3MF de serie).
  * Solo geometría: un objeto por malla, en milímetros (glTF está en metros). El color de las texturas no se incluye.
  */
-function to3mf(tris: Tri[]): Buffer {
-  const f = (n: number) => Number((n * 1000).toFixed(4)).toString();
+function to3mf(tris: Tri[], toMm = 1000): Buffer {
+  const f = (n: number) => Number((n * toMm).toFixed(4)).toString();
   const objects: string[] = [];
   const items: string[] = [];
   tris.forEach((t, i) => {
@@ -148,7 +148,128 @@ async function viaBlender(blender: string, glb: Buffer, format: 'fbx' | 'usdz'):
   }
 }
 
-export async function convert(glb: Buffer, format: Format, blenderPath?: string): Promise<Buffer> {
+/** Kit de impresión: altura final en milímetros y peana opcional. Solo para STL y 3MF. */
+export interface PrintOptions { heightMm: number; base: boolean }
+export interface PrintReport {
+  heightMm: number;
+  base: boolean;
+  /** Tamaño final de la pieza (con peana si la lleva), en milímetros. */
+  sizeMm: { x: number; y: number; z: number };
+  triangles: number;
+  /** Malla cerrada: cada arista la comparten exactamente dos triángulos. Si no, el laminador puede fallar. */
+  watertight: boolean;
+  /** Aristas de borde (agujeros) tras unir los vértices repetidos. */
+  openEdges: number;
+}
+const BASE_MM = 2;
+
+/**
+ * Prepara la malla para imprimir: Z hacia arriba (glTF usa Y), escalada a la altura pedida en mm,
+ * centrada en X/Y y apoyada en z = 0. Con peana, un disco de 2 mm debajo y la figura encima.
+ */
+function preparePrint(tris: Tri[], opts: PrintOptions): { model: Tri[]; all: Tri[] } {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  const rotated = tris.map((t) => {
+    const p = new Float32Array(t.positions.length);
+    for (let i = 0; i < p.length; i += 3) {
+      // giro de +90° sobre X: (x, y, z) -> (x, -z, y). Es una rotación, así que conserva el sentido de las caras
+      p[i] = t.positions[i]; p[i + 1] = -t.positions[i + 2]; p[i + 2] = t.positions[i + 1];
+      for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], p[i + a]); max[a] = Math.max(max[a], p[i + a]); }
+    }
+    return { positions: p, indices: t.indices };
+  });
+  const tall = max[2] - min[2];
+  if (!(tall > 0)) throw new HttpError(422, 'empty_model', 'El modelo no tiene altura que imprimir');
+  const k = opts.heightMm / tall;
+  const cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2;
+  const lift = opts.base ? BASE_MM : 0;
+  for (const t of rotated) {
+    const p = t.positions;
+    for (let i = 0; i < p.length; i += 3) {
+      p[i] = (p[i] - cx) * k; p[i + 1] = (p[i + 1] - cy) * k; p[i + 2] = (p[i + 2] - min[2]) * k + lift;
+    }
+  }
+  if (!opts.base) return { model: rotated, all: rotated };
+  // peana: disco cerrado de 64 lados, algo más ancho que la huella de la figura
+  const r = Math.max(max[0] - min[0], max[1] - min[1]) * k * 0.55 + 2;
+  const n = 64;
+  const pos: number[] = [0, 0, 0, 0, 0, BASE_MM];
+  for (let j = 0; j < n; j++) {
+    const a = (j / n) * Math.PI * 2;
+    pos.push(Math.cos(a) * r, Math.sin(a) * r, 0, Math.cos(a) * r, Math.sin(a) * r, BASE_MM);
+  }
+  const idx: number[] = [];
+  for (let j = 0; j < n; j++) {
+    const lo = 2 + j * 2, hi = lo + 1, lo2 = 2 + ((j + 1) % n) * 2, hi2 = lo2 + 1;
+    idx.push(0, lo2, lo); // abajo (normal -Z)
+    idx.push(1, hi, hi2); // arriba (normal +Z)
+    idx.push(lo, lo2, hi2, lo, hi2, hi); // canto (normal hacia fuera)
+  }
+  const disc = { positions: new Float32Array(pos), indices: new Uint32Array(idx) };
+  return { model: rotated, all: [disc, ...rotated] };
+}
+
+/** Aristas abiertas tras unir los vértices que caen en el mismo sitio (los motores duplican vértices en las costuras de UV). */
+function edgeCheck(tris: Tri[]): { open: number; bad: number } {
+  const ids = new Map<string, number>();
+  const id = (p: Float32Array, i: number) => {
+    const key = `${Math.round(p[i] * 1e3)},${Math.round(p[i + 1] * 1e3)},${Math.round(p[i + 2] * 1e3)}`;
+    let v = ids.get(key);
+    if (v === undefined) { v = ids.size; ids.set(key, v); }
+    return v;
+  };
+  const edges = new Map<number, number>();
+  for (const t of tris) {
+    const w = Array.from({ length: t.positions.length / 3 }, (_, i) => id(t.positions, i * 3));
+    for (let i = 0; i < t.indices.length; i += 3) {
+      const v = [w[t.indices[i]], w[t.indices[i + 1]], w[t.indices[i + 2]]];
+      if (v[0] === v[1] || v[1] === v[2] || v[0] === v[2]) continue; // triángulo degenerado
+      for (let e = 0; e < 3; e++) {
+        const a = v[e], b = v[(e + 1) % 3];
+        const key = a < b ? a * 0x4000000 + b : b * 0x4000000 + a;
+        edges.set(key, (edges.get(key) ?? 0) + 1);
+      }
+    }
+  }
+  let open = 0, bad = 0;
+  for (const c of edges.values()) { if (c === 1) open++; if (c !== 2) bad++; }
+  return { open, bad };
+}
+
+function report(prep: { model: Tri[]; all: Tri[] }, opts: PrintOptions): PrintReport {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  let count = 0;
+  for (const t of prep.all) {
+    count += t.indices.length / 3;
+    for (let i = 0; i < t.positions.length; i += 3) for (let a = 0; a < 3; a++) {
+      min[a] = Math.min(min[a], t.positions[i + a]); max[a] = Math.max(max[a], t.positions[i + a]);
+    }
+  }
+  const { open, bad } = edgeCheck(prep.model);
+  const mm = (n: number) => Math.round(n * 10) / 10;
+  return {
+    heightMm: opts.heightMm, base: opts.base, triangles: count,
+    sizeMm: { x: mm(max[0] - min[0]), y: mm(max[1] - min[1]), z: mm(max[2] - min[2]) },
+    watertight: bad === 0, openEdges: open,
+  };
+}
+
+/** Informe de impresión sin generar el archivo: tamaño final y si la malla está cerrada. */
+export async function printReport(glb: Buffer, opts: PrintOptions): Promise<PrintReport> {
+  return report(preparePrint(triangles(await gltfIO().readBinary(new Uint8Array(glb))), opts), opts);
+}
+
+/** STL o 3MF listos para el laminador (en mm), con su informe. */
+export async function convertForPrint(glb: Buffer, format: 'stl' | '3mf', opts: PrintOptions): Promise<{ bytes: Buffer; report: PrintReport }> {
+  const prep = preparePrint(triangles(await gltfIO().readBinary(new Uint8Array(glb))), opts);
+  return { bytes: format === 'stl' ? toStl(prep.all) : to3mf(prep.all, 1), report: report(prep, opts) };
+}
+
+export async function convert(glb: Buffer, format: Format, blenderPath?: string, print?: PrintOptions): Promise<Buffer> {
+  if (print) {
+    if (format !== 'stl' && format !== '3mf') throw new HttpError(422, 'print_format', 'Las opciones de impresión son para STL y 3MF');
+    return (await convertForPrint(glb, format, print)).bytes;
+  }
   if (format === 'glb') return glb;
   if (format === 'obj' || format === 'stl' || format === '3mf') {
     const tris = triangles(await gltfIO().readBinary(new Uint8Array(glb)));

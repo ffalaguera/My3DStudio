@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, distinctUntilChanged, filter, from, map, merge, startWith, switchMap } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  CreditPack, PlanLimits, Privacy, Profile, Task, Upload,
+  CreditPack, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
 } from './api';
 import { LocalAuth, SelfAuth, SupabaseAuth, type AuthClient } from './auth-client';
 import { RUNTIME_CONFIG } from './runtime-config';
@@ -255,8 +255,12 @@ export class HttpApi extends Api implements OnDestroy {
     void this.refreshMe();
   }
 
-  async exportAsset(id: string, format: ExportFormat): Promise<{ url: string; filename: string }> {
-    const r = await this.req<{ url: string; filename: string }>('POST', `/assets/${id}/export`, { format });
+  previewImage(prompt: string): Promise<Upload> {
+    return this.req<{ upload: Upload }>('POST', '/tasks/preview', { prompt }).then((r) => r.upload);
+  }
+
+  async exportAsset(id: string, format: ExportFormat, print?: PrintOptions): Promise<{ url: string; filename: string; print?: PrintReport }> {
+    const r = await this.req<{ url: string; filename: string; print?: PrintReport }>('POST', `/assets/${id}/export`, print ? { format, print } : { format });
     void this.refreshMe();
     return r;
   }

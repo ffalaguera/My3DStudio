@@ -50,6 +50,8 @@ export class Workspace {
   protected readonly uploadError = signal('');
   protected readonly prompt = signal('');
   protected readonly texturePrompt = signal('');
+  protected readonly textPreview = signal<Upload | null>(null);
+  protected readonly previewing = signal(false);
   protected readonly showTexturePrompt = signal(false);
   protected readonly settingsOpen = signal(false);
   protected readonly privacy = signal<Privacy>('public');
@@ -122,6 +124,15 @@ export class Workspace {
   }
 
   private request(): Omit<CreateTaskRequest, 'idempotencyKey'> {
+    // texto con la imagen ya aprobada: el modelo se crea a partir de esa imagen (mismo precio)
+    const pv = this.mode() === 'text_to_model' ? this.textPreview() : null;
+    if (pv) {
+      return {
+        type: 'image_to_model', series: this.series(), uploadId: pv.id,
+        params: { ...this.params(), variants: this.series() === 'smart' ? this.params().variants : 1 },
+        privacy: this.privacy(),
+      };
+    }
     return {
       type: this.mode(), series: this.series(),
       prompt: this.mode() === 'text_to_model' ? this.prompt() : undefined,
@@ -151,6 +162,25 @@ export class Workspace {
       this.uploadError.set(e instanceof ApiError ? e.message : 'No se ha podido subir la imagen');
     } finally {
       this.uploading.set(false);
+    }
+  }
+
+  /** Vista previa antes de pagar: pide solo la imagen de referencia del texto. No gasta créditos. */
+  protected async previewText(): Promise<void> {
+    if (this.previewing()) return;
+    if (!this.prompt().trim()) {
+      this.promptError.set('Describe el objeto que quieres crear');
+      return;
+    }
+    this.previewing.set(true);
+    try {
+      if (!(await this.gates.ensureSignedIn())) return;
+      this.textPreview.set(await this.api.previewImage(this.prompt().trim()));
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'insufficient_credits') this.gates.showPaywall('insufficient_credits', e.message);
+      else this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido crear la imagen');
+    } finally {
+      this.previewing.set(false);
     }
   }
 

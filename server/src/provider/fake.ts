@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { Document, NodeIO } from '@gltf-transform/core';
 import type { GenerationInput, GenerationOutput, GenerationProvider } from './provider.js';
 import { ProviderError } from './provider.js';
@@ -98,4 +99,46 @@ export class FakeProvider implements GenerationProvider {
     for (let v = 0; v < input.params.variants; v++) variants.push(await vesselGlb(hash(`${input.taskId}:${v}`), radial, rings, color));
     return { variants, modelVersion: 'fake-1' };
   }
+
+  /** Imagen de demostración: un disco de color (según el texto) sobre fondo claro, 512 px, PNG real. */
+  async referenceImage(prompt: string, signal: AbortSignal): Promise<{ bytes: Buffer; contentType: 'image/png' }> {
+    await sleep(Math.min(this.stepMs, 300), signal);
+    if (/fallo/i.test(prompt)) throw new ProviderError('No se ha podido crear la imagen de referencia');
+    const [r, g, b] = hsl((hash(prompt) % 360) / 360, 0.45, 0.55).map((c) => Math.round(c * 255));
+    return { bytes: discPng(512, [r, g, b]), contentType: 'image/png' };
+  }
+}
+
+/** PNG mínimo (RGB, sin filtro) con un disco de color centrado. Solo para el motor de demostración. */
+export function discPng(size: number, rgb: [number, number, number]): Buffer {
+  const raw = Buffer.alloc((size * 3 + 1) * size);
+  const c = size / 2, r2 = (size * 0.34) ** 2;
+  for (let y = 0; y < size; y++) {
+    const row = y * (size * 3 + 1);
+    for (let x = 0; x < size; x++) {
+      const inside = (x - c) ** 2 + (y - c) ** 2 <= r2;
+      const o = row + 1 + x * 3;
+      raw[o] = inside ? rgb[0] : 240; raw[o + 1] = inside ? rgb[1] : 238; raw[o + 2] = inside ? rgb[2] : 232;
+    }
+  }
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let k = n;
+    for (let i = 0; i < 8; i++) k = k & 1 ? 0xedb88320 ^ (k >>> 1) : k >>> 1;
+    return k >>> 0;
+  });
+  const crc = (b: Buffer) => {
+    let x = 0xffffffff;
+    for (const v of b) x = crcTable[(x ^ v) & 0xff] ^ (x >>> 8);
+    return (x ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const cr = Buffer.alloc(4); cr.writeUInt32BE(crc(td));
+    return Buffer.concat([len, td, cr]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }

@@ -34,4 +34,9 @@ export class ProviderError extends Error {
 export interface GenerationProvider {
   readonly name: string;
   generate(input: GenerationInput, onProgress: (pct: number) => Promise<void>, signal: AbortSignal): Promise<GenerationOutput>;
+  /**
+   * Vista previa antes de pagar: solo la imagen de referencia de un texto (el primer paso de texto a 3D).
+   * Cuesta céntimos de céntimo; el modelo 3D se genera después a partir de esta imagen si el usuario la aprueba.
+   */
+  referenceImage(prompt: string, signal: AbortSignal): Promise<{ bytes: Buffer; contentType: 'image/png' }>;
 }

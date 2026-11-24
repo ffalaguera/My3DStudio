@@ -271,18 +271,18 @@ export class Home {
       text: 'Descárgalo para tu laminador, tu motor de juego, tu web o realidad aumentada. La descarga va incluida, sin pagar aparte.' },
   ];
   protected readonly promises = [
-    { icon: 'zap', title: 'El precio, antes', text: 'Cada generación muestra su coste antes de empezar. Nada se cobra después.' },
+    { icon: 'zap', title: 'Ves antes de pagar', text: 'Si lo describes con texto, primero ves la imagen de la que saldrá el modelo, sin gastar créditos. Y el coste se muestra antes de empezar.' },
     { icon: 'download', title: 'Descarga incluida', text: 'Lo que generas se descarga en todos los formatos, sin pagar por exportar.' },
     { icon: 'history', title: 'Créditos que duran', text: 'Lo que no gastes un mes pasa al siguiente, y los packs no caducan nunca.' },
     { icon: 'rotate-ccw', title: 'Si falla, se devuelve', text: 'Una generación fallida o cancelada no cuesta nada: los créditos vuelven solos.' },
     { icon: 'x', title: 'Te vas cuando quieras', text: 'Cancelas desde tu cuenta, sin encuestas ni descuentos para retenerte.' },
-    { icon: 'box', title: 'Listo para imprimir', text: 'STL y 3MF para tu laminador (el 3MF ya en milímetros), además de GLB, OBJ, FBX y USDZ.' },
+    { icon: 'box', title: 'Listo para imprimir', text: 'Eliges la altura en milímetros y, si quieres, una peana. El STL o 3MF sale de pie, a tamaño real y con aviso si la malla tiene agujeros.' },
   ];
   protected readonly faq = [
     { q: '¿Qué es un crédito?', a: 'La unidad con la que pagas cada generación. Un modelo de alto detalle cuesta 50 créditos; el botón Generar siempre te dice el coste exacto.' },
     { q: '¿Hay plan gratis?', a: 'Crear la cuenta y mirar es gratis, pero cada modelo usa GPU de pago, así que no regalamos generaciones. Para probar, el pack de 3 € trae 3 modelos que no caducan.' },
     { q: '¿Qué pasa con los créditos que no gasto?', a: 'Los del mes pasan al mes siguiente (como mucho, lo de un mes). Los de los packs no caducan nunca.' },
-    { q: '¿Y si el modelo sale mal o falla?', a: 'Si falla o la cancelas, se devuelven los créditos. Si sale pero no te gusta, puedes reintentar: cuesta lo mismo que generar, porque cada intento usa GPU de pago.' },
+    { q: '¿Y si el modelo sale mal o falla?', a: 'Si falla o la cancelas, se devuelven los créditos. Con texto puedes ver antes la imagen de la que saldrá, gratis, y pedir otra hasta que te convenza. Si el modelo sale pero no te gusta, reintentar cuesta lo mismo que generar, porque cada intento usa GPU de pago.' },
     { q: '¿Cómo cancelo?', a: 'En Tu cuenta → Gestionar o cancelar suscripción. Sin preguntas. Sigues con tu plan hasta el final del periodo pagado.' },
     { q: '¿Quién es dueño de los modelos?', a: 'Tú. Puedes usarlos comercialmente y mantenerlos privados, compres un pack o una suscripción.' },
   ];

@@ -43,7 +43,7 @@
       } @else {
         <label class="label">Describe el objeto
           <textarea class="field p-3 min-h-28" rows="4" maxlength="1024" [ngModel]="prompt()"
-            (ngModelChange)="prompt.set($event); promptError.set('')" (keydown.control.enter)="generate()"
+            (ngModelChange)="prompt.set($event); promptError.set(''); textPreview.set(null)" (keydown.control.enter)="generate()"
             placeholder="Una tetera de cerámica esmaltada con asa de bambú" [attr.aria-invalid]="!!promptError()"
             aria-describedby="prompt-count prompt-error"></textarea>
         </label>
@@ -53,6 +53,20 @@
             @if (prompt().length > 800) { {{ prompt().length }} / 1024 }
           </span>
         </div>
+        <!-- Vista previa antes de pagar: la imagen de la que saldrá el modelo, sin gastar créditos -->
+        @if (textPreview(); as pv) {
+          <figure class="flex flex-col gap-2" data-testid="text-preview">
+            <img [src]="pv.previewUrl" alt="Imagen de referencia del texto" class="w-full aspect-square object-contain rounded-md bg-surface" />
+            <figcaption class="hint">El modelo 3D saldrá de esta imagen. Verla no ha gastado créditos.</figcaption>
+            <button type="button" class="btn btn-secondary btn-sm self-start" (click)="previewText()" [disabled]="previewing()">
+              <ui-icon name="rotate-ccw" [size]="14" /> Otra imagen</button>
+          </figure>
+        } @else {
+          <button type="button" class="btn btn-secondary btn-sm self-start" (click)="previewText()" [disabled]="previewing()" [attr.aria-busy]="previewing()">
+            @if (previewing()) { <ui-icon name="loader-circle" class="animate-spin" [size]="14" /> Creando la imagen… }
+            @else { <ui-icon name="image" [size]="14" /> Ver la imagen primero (sin coste) }
+          </button>
+        }
         @if (showTexturePrompt()) {
           <label class="label">Cómo es su superficie (opcional)
             <textarea class="field p-3" rows="2" maxlength="1024" [ngModel]="texturePrompt()" (ngModelChange)="texturePrompt.set($event)"
@@ -149,7 +163,7 @@
       <button type="button" class="btn btn-primary btn-lg w-full" (click)="generate()" [disabled]="submitting()" [attr.aria-busy]="submitting()">
         @if (submitting()) { <ui-icon name="loader-circle" class="animate-spin" /> Enviando… }
         @else {
-          Generar
+          {{ mode() === 'text_to_model' && textPreview() ? 'Generar 3D de esta imagen' : 'Generar' }}
           @if (est) { <span class="flex items-center gap-1 text-sm font-normal"><ui-icon name="zap" [size]="14" />{{ est.credits }}<span class="sr-only">créditos</span></span> }
         }
       </button>
