@@ -24,11 +24,22 @@ module.exports = {
       "warning": "rgb(var(--color-warning) / <alpha-value>)",
       "viewport-from": "rgb(var(--color-viewport-from) / <alpha-value>)",
       "viewport-to": "rgb(var(--color-viewport-to) / <alpha-value>)",
-      "overlay": "rgb(var(--color-overlay) / <alpha-value>)"
+      "overlay": "rgb(var(--color-overlay) / <alpha-value>)",
+      "primer": "rgb(var(--color-primer) / <alpha-value>)",
+      "primer-deep": "rgb(var(--color-primer-deep) / <alpha-value>)",
+      "bone": "rgb(var(--color-bone) / <alpha-value>)",
+      "bone-deep": "rgb(var(--color-bone-deep) / <alpha-value>)",
+      "ink": "rgb(var(--color-ink) / <alpha-value>)",
+      "ink-soft": "rgb(var(--color-ink-soft) / <alpha-value>)",
+      "lid-red": "rgb(var(--color-lid-red) / <alpha-value>)",
+      "lid-blue": "rgb(var(--color-lid-blue) / <alpha-value>)",
+      "lid-mustard": "rgb(var(--color-lid-mustard) / <alpha-value>)",
+      "lid-green": "rgb(var(--color-lid-green) / <alpha-value>)"
     },
     "fontFamily": {
       "sans": "var(--font-sans)",
-      "mono": "var(--font-mono)"
+      "mono": "var(--font-mono)",
+      "display": "var(--font-display)"
     },
     "fontSize": {
       "xs": [

@@ -1,0 +1,41 @@
+{
+  "generated": "2026-11-24T12:18:38.883Z",
+  "tool": "My3DStudio (fal TRELLIS.2 + FLUX.1 schnell)",
+  "items": [
+    {
+      "slug": "dragon",
+      "prompt": "Un dragón pequeño posado sobre una roca, figura de miniatura para juego de rol de mesa, muy detallado",
+      "engine": "fal:fal-ai/trellis-2",
+      "bytes": 2167768,
+      "seconds": 40
+    },
+    {
+      "slug": "buho",
+      "prompt": "Un búho decorativo de cerámica sentado, con plumas talladas",
+      "engine": "fal:fal-ai/trellis-2",
+      "bytes": 1172640,
+      "seconds": 54
+    },
+    {
+      "slug": "estacion",
+      "prompt": "Una pequeña estación de tren rural de piedra y madera para maqueta de tren de jardín",
+      "engine": "fal:fal-ai/trellis-2",
+      "bytes": 1829028,
+      "seconds": 103
+    },
+    {
+      "slug": "caballo",
+      "prompt": "La pieza de ajedrez del caballo con armadura medieval, sobre peana redonda",
+      "engine": "fal:fal-ai/trellis-2",
+      "bytes": 1891024,
+      "seconds": 73
+    },
+    {
+      "slug": "maceta",
+      "prompt": "Una maceta geométrica facetada con una suculenta dentro",
+      "engine": "fal:fal-ai/trellis-2",
+      "bytes": 2227480,
+      "seconds": 90
+    }
+  ]
+}

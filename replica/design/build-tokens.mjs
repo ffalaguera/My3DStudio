@@ -20,6 +20,7 @@ const v = (name, value) => lines.push(`  --${name}: ${value};`);
 for (const [k, hex] of Object.entries(t.color)) v(`color-${k}`, rgb(hex));
 v("font-sans", t.font.sans);
 v("font-mono", t.font.mono);
+v("font-display", t.font.display);
 for (const [k, s] of Object.entries(t.type)) {
   v(`text-${k}`, `${s.size / 16}rem`);
   v(`leading-${k}`, `${s.line / 16}rem`);
@@ -70,7 +71,7 @@ const fontSize = Object.fromEntries(
 const preset = {
   theme: {
     colors: { transparent: "transparent", current: "currentColor", ...colors },
-    fontFamily: { sans: "var(--font-sans)", mono: "var(--font-mono)" },
+    fontFamily: { sans: "var(--font-sans)", mono: "var(--font-mono)", display: "var(--font-display)" },
     fontSize,
     borderRadius: {
       none: "0",

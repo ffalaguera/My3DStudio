@@ -181,7 +181,10 @@ export class HttpApi extends Api implements OnDestroy {
 
   estimate(req: Omit<CreateTaskRequest, 'idempotencyKey'>): Promise<Estimate> {
     if (!this.auth.user$.value) {
-      return Promise.resolve({ credits: req.series === 'smart' ? 100 * req.params.variants : 15, etaSeconds: 0, allowed: false, reason: 'not_signed_in' });
+      // sin sesión se estima con la tarifa pública (replica/launch/pricing.md); con sesión la calcula el servidor
+      const tex = req.params.texture ? { '2k': 0, '4k': 10, '8k': 20 }[req.params.textureResolution] : 0;
+      const credits = req.series === 'smart' ? 50 * req.params.variants : 50 + tex;
+      return Promise.resolve({ credits, etaSeconds: 0, allowed: false, reason: 'not_signed_in' });
     }
     return this.req<Estimate>('POST', '/tasks/estimate', this.body(req));
   }

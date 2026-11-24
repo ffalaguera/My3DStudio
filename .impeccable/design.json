@@ -1,0 +1,712 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-24T12:38:07.165Z",
+  "title": "Design System: My3DStudio",
+  "extensions": {
+    "colorMeta": {
+      "lid-red": {
+        "role": "primary",
+        "displayName": "Rojo de tapa",
+        "canonical": "oklch(50.3% 0.177 24)",
+        "tonalRamp": [
+          "#1d0102",
+          "#560000",
+          "#850516",
+          "#b52a30",
+          "#d55e5a",
+          "#f58c86",
+          "#f3c4c0",
+          "#ffe4e0"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Rojo de tapa encendido",
+        "canonical": "oklch(55.4% 0.187 23)",
+        "tonalRamp": [
+          "#1c0203",
+          "#550002",
+          "#840618",
+          "#b62731",
+          "#de5555",
+          "#fd8581",
+          "#f7c2be",
+          "#ffe1de"
+        ]
+      },
+      "on-accent": {
+        "role": "primary",
+        "displayName": "Crema sobre tapa",
+        "canonical": "oklch(96.5% 0.018 89)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#272624",
+          "#464541",
+          "#686660",
+          "#8c8981",
+          "#b1aea4",
+          "#d3d1cb",
+          "#f1eee8"
+        ]
+      },
+      "lid-blue": {
+        "role": "secondary",
+        "displayName": "Azul de tapa",
+        "canonical": "oklch(48.8% 0.129 259)",
+        "tonalRamp": [
+          "#030b1c",
+          "#032355",
+          "#1a4382",
+          "#3765ad",
+          "#608acb",
+          "#8bafe9",
+          "#c2d2eb",
+          "#e2f0ff"
+        ]
+      },
+      "lid-mustard": {
+        "role": "secondary",
+        "displayName": "Ocre mostaza",
+        "canonical": "oklch(70.4% 0.132 81)",
+        "tonalRamp": [
+          "#110a01",
+          "#372200",
+          "#5c3f00",
+          "#845f05",
+          "#ae801e",
+          "#d6a546",
+          "#e3cea9",
+          "#ffeccb"
+        ]
+      },
+      "lid-green": {
+        "role": "secondary",
+        "displayName": "Verde de tapa",
+        "canonical": "oklch(52.7% 0.093 151)",
+        "tonalRamp": [
+          "#030e06",
+          "#052f15",
+          "#1f512f",
+          "#3a754b",
+          "#639870",
+          "#8ebb98",
+          "#c4d7c7",
+          "#e3f4e6"
+        ]
+      },
+      "highlight": {
+        "role": "tertiary",
+        "displayName": "Azul de selección",
+        "canonical": "oklch(71.6% 0.103 260)",
+        "tonalRamp": [
+          "#070b13",
+          "#172640",
+          "#304568",
+          "#4b6694",
+          "#688ac2",
+          "#8aafed",
+          "#c1d2ee",
+          "#e0f0ff"
+        ]
+      },
+      "highlight-surface": {
+        "role": "tertiary",
+        "displayName": "Fondo de selección",
+        "canonical": "oklch(28.8% 0.042 261)",
+        "tonalRamp": [
+          "#070b13",
+          "#1b263b",
+          "#3a4559",
+          "#5c6779",
+          "#808a9a",
+          "#a7aebb",
+          "#ced1d6",
+          "#eceff2"
+        ]
+      },
+      "primer": {
+        "role": "neutral",
+        "displayName": "Gris imprimación",
+        "canonical": "oklch(64.2% 0.005 236)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252728",
+          "#434547",
+          "#646668",
+          "#878a8b",
+          "#acaeb0",
+          "#d0d1d2",
+          "#edefef"
+        ]
+      },
+      "primer-deep": {
+        "role": "neutral",
+        "displayName": "Imprimación honda",
+        "canonical": "oklch(56.8% 0.006 247)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#87898c",
+          "#acaeb1",
+          "#d0d1d2",
+          "#edeeef"
+        ]
+      },
+      "bone": {
+        "role": "neutral",
+        "displayName": "Papel hueso",
+        "canonical": "oklch(91.6% 0.022 89)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#282623",
+          "#47453f",
+          "#69665e",
+          "#8d897f",
+          "#b2aea1",
+          "#d3d1c9",
+          "#f1eee6"
+        ]
+      },
+      "bone-deep": {
+        "role": "neutral",
+        "displayName": "Hueso tostado",
+        "canonical": "oklch(86.2% 0.028 88)",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#282621",
+          "#48453d",
+          "#6a665b",
+          "#8e897b",
+          "#b4ad9c",
+          "#d5d1c7",
+          "#f2eee5"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(22.3% 0.002 67)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#272625",
+          "#464544",
+          "#676665",
+          "#8a8988",
+          "#aeaead",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Tinta suave",
+        "canonical": "oklch(34.6% 0.006 78)",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#282624",
+          "#474542",
+          "#686663",
+          "#8a8986",
+          "#afaeac",
+          "#d1d1d0",
+          "#efeeee"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Fondo de taller",
+        "canonical": "oklch(19.6% 0.003 67)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#272625",
+          "#464544",
+          "#676665",
+          "#8a8988",
+          "#aeaead",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie",
+        "canonical": "oklch(23.2% 0.005 67)",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#282624",
+          "#464543",
+          "#676664",
+          "#8a8987",
+          "#afaeac",
+          "#d1d1d0",
+          "#efeeee"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Superficie 2",
+        "canonical": "oklch(26.7% 0.007 67)",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#292623",
+          "#474442",
+          "#686563",
+          "#8b8986",
+          "#afadac",
+          "#d1d1d0",
+          "#efeeee"
+        ]
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Superficie 3",
+        "canonical": "oklch(31.2% 0.009 67)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#292622",
+          "#484440",
+          "#696562",
+          "#8c8885",
+          "#b0adab",
+          "#d2d1d0",
+          "#efeeed"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Borde",
+        "canonical": "oklch(34.7% 0.010 73)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#292621",
+          "#48443f",
+          "#696561",
+          "#8c8985",
+          "#b0adaa",
+          "#d2d1cf",
+          "#efeeed"
+        ]
+      },
+      "border-input": {
+        "role": "neutral",
+        "displayName": "Borde de campo",
+        "canonical": "oklch(59.6% 0.018 79)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#2a2620",
+          "#49443d",
+          "#6b655c",
+          "#8f887d",
+          "#b3ada3",
+          "#d3d0cc",
+          "#f0eeea"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Texto",
+        "canonical": "oklch(92.5% 0.022 89)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#282623",
+          "#474540",
+          "#69665e",
+          "#8d897f",
+          "#b2aea1",
+          "#d3d1c9",
+          "#f1eee6"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Texto apagado",
+        "canonical": "oklch(75.0% 0.024 84)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#292620",
+          "#49453c",
+          "#6b655b",
+          "#8f887b",
+          "#b5ad9d",
+          "#d4d1c9",
+          "#f1eee7"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Foco ámbar",
+        "canonical": "oklch(81.6% 0.130 90)",
+        "tonalRamp": [
+          "#0e0b04",
+          "#302503",
+          "#534311",
+          "#796423",
+          "#a18636",
+          "#cbaa4a",
+          "#e0d0a3",
+          "#fdeec5"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Peligro",
+        "canonical": "oklch(76.7% 0.138 28)",
+        "tonalRamp": [
+          "#130806",
+          "#401914",
+          "#6a322b",
+          "#974e45",
+          "#c66b5f",
+          "#f88a7c",
+          "#f7c2ba",
+          "#ffe1da"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Éxito",
+        "canonical": "oklch(76.1% 0.116 141)",
+        "tonalRamp": [
+          "#070d06",
+          "#162d14",
+          "#2f4e2b",
+          "#497245",
+          "#669860",
+          "#83c07c",
+          "#bfdabb",
+          "#def7db"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Aviso",
+        "canonical": "oklch(79.7% 0.130 82)",
+        "tonalRamp": [
+          "#0f0a04",
+          "#342301",
+          "#58410f",
+          "#7f6121",
+          "#a98234",
+          "#d5a648",
+          "#e5cea4",
+          "#ffecc6"
+        ]
+      },
+      "viewport-from": {
+        "role": "neutral",
+        "displayName": "Campo del visor (centro)",
+        "canonical": "oklch(69.4% 0.004 236)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252727",
+          "#434546",
+          "#646668",
+          "#87898b",
+          "#abaeb0",
+          "#d0d1d2",
+          "#edefef"
+        ]
+      },
+      "viewport-to": {
+        "role": "neutral",
+        "displayName": "Campo del visor (borde)",
+        "canonical": "oklch(62.9% 0.006 247)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#86898c",
+          "#abaeb1",
+          "#d0d1d2",
+          "#edeef0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-hero": {
+        "displayName": "Display hero",
+        "purpose": "h1 de portada y precios: 52px en móvil, 76px desde sm, mayúsculas, arriba a la izquierda."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "h2 de cada banda de imprimación, hueso o tinta: 48px en móvil, 60px desde sm, mayúsculas."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Etiquetas de bote, títulos de promesa, preguntas y cifras del visor, en mayúsculas condensadas."
+      },
+      "lid-figure": {
+        "displayName": "Cifra de tapa",
+        "purpose": "Precio o número impreso dentro de un bote, con cifras tabulares."
+      },
+      "app-display": {
+        "displayName": "App display",
+        "purpose": "h1 de página en la app oscura (token display 40/46; la regla base lo pasa a la condensada en 800)."
+      },
+      "app-title": {
+        "displayName": "App title",
+        "purpose": "Títulos de sección en la app (token xl)."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Subtítulos de panel en la app (token lg)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido y botones grandes."
+      },
+      "body-sm": {
+        "displayName": "Body sm",
+        "purpose": "Texto de banda y de panel, botones, campos."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Pistas, cartelas, chips y etiquetas de dato; rótulo de sección de panel en mayúsculas con tracking amplio."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px rgba(0,0,0,.4)",
+        "purpose": "Asiento mínimo de tarjetas en la app."
+      },
+      {
+        "name": "float",
+        "value": "0 8px 24px rgba(0,0,0,.45)",
+        "purpose": "Barra de navegación flotante y avisos."
+      },
+      {
+        "name": "pop",
+        "value": "0 16px 40px rgba(0,0,0,.55)",
+        "purpose": "Menús y modales."
+      },
+      {
+        "name": "lid-rest",
+        "value": "0 4px 10px rgb(0 0 0 / 0.22)",
+        "purpose": "Tapa de bote en reposo (tapa plana impresa, canto de 3px oscurecido)."
+      },
+      {
+        "name": "lid-pressed",
+        "value": "0 1px 3px rgb(0 0 0 / 0.28)",
+        "purpose": "Tapa pulsada o activa, con translateY(2px)."
+      },
+      {
+        "name": "sheet",
+        "value": "0 12px 32px rgb(0 0 0 / 0.22)",
+        "purpose": "Hoja hueso sobre la mesa: tablero de planes (0.35 sobre tinta en «Contenido del bote»)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fast",
+        "value": "120ms",
+        "purpose": "Hover y pulsación de botones, chips y tapas."
+      },
+      {
+        "name": "base",
+        "value": "200ms",
+        "purpose": "Giro del chevron de preguntas y cambios de estado medianos."
+      },
+      {
+        "name": "slow",
+        "value": "320ms",
+        "purpose": "Fundido de líneas guía y etiquetas del visor."
+      },
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Curva por defecto de todas las transiciones."
+      },
+      {
+        "name": "lid-press",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Hundimiento de la tapa al pulsar."
+      },
+      {
+        "name": "lid-enter",
+        "value": "lid-press 560ms cubic-bezier(0.16, 1, 0.3, 1), escalonado 60ms por --i",
+        "purpose": "Única entrada de la portada: las tapas se asientan una tras otra; desactivada con prefers-reduced-motion."
+      },
+      {
+        "name": "first-paint",
+        "value": "650ms",
+        "purpose": "El primer modelo del visor se pinta en imprimación y se repinta con textura a los 650ms."
+      },
+      {
+        "name": "orbit",
+        "value": "dampingFactor 0.06, autoRotateSpeed 1.1, reanuda a los 3000ms",
+        "purpose": "Órbita con inercia del visor; sin giro automático con prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de la vista, la que gasta créditos o paga; lleva el coste dentro.",
+      "html": "<button class=\"ds-btn-primary\">Generar · 50 créditos</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: 0; border-radius: 999px; background: rgb(var(--color-lid-red, 179 38 45)); color: rgb(var(--color-on-accent, 248 243 230)); font: 600 16px/24px \"Inter Variable\", Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums lining-nums; cursor: pointer; transition: background-color 120ms cubic-bezier(.2,.8,.2,1), transform 120ms cubic-bezier(.2,.8,.2,1); } .ds-btn-primary:hover { background: rgb(var(--color-accent-hover, 201 50 58)); } .ds-btn-primary:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px) scale(0.98); }"
+    },
+    {
+      "name": "Botón de tinta",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Secundario de las páginas de persuasión sobre imprimación o hueso.",
+      "html": "<button class=\"ds-btn-ink\">Ver todos los precios</button>",
+      "css": ".ds-btn-ink { display: inline-flex; align-items: center; height: 48px; padding: 0 24px; border: 0; border-radius: 999px; background: rgb(var(--color-ink, 28 27 26)); color: rgb(var(--color-bone, 233 227 211)); font: 500 16px/24px \"Inter Variable\", Inter, system-ui, sans-serif; cursor: pointer; transition: background-color 120ms cubic-bezier(.2,.8,.2,1), transform 120ms cubic-bezier(.2,.8,.2,1); } .ds-btn-ink:hover { background: rgb(var(--color-ink-soft, 59 57 54)); } .ds-btn-ink:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; } .ds-btn-ink:active { transform: translateY(1px) scale(0.98); }"
+    },
+    {
+      "name": "Botón secundario (app)",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción secundaria en la app oscura.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; height: 40px; padding: 0 20px; border: 1px solid rgb(var(--color-border, 61 57 52)); border-radius: 999px; background: rgb(var(--color-surface-3, 52 48 44)); color: rgb(var(--color-text, 236 230 214)); font: 500 14px/20px \"Inter Variable\", Inter, system-ui, sans-serif; cursor: pointer; transition: border-color 120ms cubic-bezier(.2,.8,.2,1), transform 120ms cubic-bezier(.2,.8,.2,1); } .ds-btn-secondary:hover { border-color: rgb(var(--color-border-input, 133 126 115)); } .ds-btn-secondary:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; } .ds-btn-secondary:active { transform: translateY(1px) scale(0.98); }"
+    },
+    {
+      "name": "Bote de pintura",
+      "kind": "custom",
+      "refersTo": "pot-lid",
+      "description": "Tapa circular de color con número impreso; pasos de la guía. Se hunde al pulsar.",
+      "html": "<div class=\"ds-pots\"><button class=\"ds-pot\"><span class=\"ds-lid\" style=\"--i: 1\">2</span><span class=\"ds-pot-label\">Malla gris</span></button><button class=\"ds-pot\" aria-pressed=\"true\"><span class=\"ds-lid\" data-lid=\"blue\" style=\"--i: 2\">3</span><span class=\"ds-pot-label\">Textura</span></button><button class=\"ds-pot\"><span class=\"ds-lid\" data-lid=\"green\" style=\"--i: 3\">4</span><span class=\"ds-pot-label\">Archivo</span></button></div>",
+      "css": ".ds-pots { display: flex; gap: 16px; padding: 24px; background: rgb(var(--color-primer, 138 141 143)); color: rgb(var(--color-ink, 28 27 26)); } .ds-pot { display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: 0; padding: 4px; border-radius: 16px; color: inherit; cursor: pointer; } .ds-pot:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; } .ds-lid { --lid: var(--color-lid-mustard, 201 150 43); width: 80px; height: 80px; border-radius: 50%; display: grid; place-items: center; font: 800 30px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; color: rgb(var(--color-ink, 28 27 26)); background: rgb(var(--lid)); border: 3px solid color-mix(in srgb, rgb(var(--lid)) 72%, black); box-shadow: 0 4px 10px rgb(0 0 0 / 0.22); transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 120ms ease-out; } .ds-lid[data-lid=\"blue\"] { --lid: var(--color-lid-blue, 47 94 168); color: rgb(var(--color-on-accent, 248 243 230)); } .ds-lid[data-lid=\"green\"] { --lid: var(--color-lid-green, 62 122 79); color: rgb(var(--color-on-accent, 248 243 230)); } .ds-pot:active .ds-lid, .ds-pot[aria-pressed=\"true\"] .ds-lid { transform: translateY(2px); box-shadow: 0 1px 3px rgb(0 0 0 / 0.28); } .ds-pot[aria-pressed=\"true\"] .ds-lid { outline: 3px solid rgb(var(--color-ink, 28 27 26)); outline-offset: 3px; } .ds-lid { animation: ds-lid-press 560ms cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 60ms + 120ms); } @keyframes ds-lid-press { from { transform: translateY(-10px) scale(0.92); opacity: 0; } 60% { transform: translateY(2px) scale(1); opacity: 1; } to { transform: none; opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-lid { animation: none; } } .ds-pot-label { font: 800 18px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; text-transform: uppercase; }"
+    },
+    {
+      "name": "Bote de precio",
+      "kind": "custom",
+      "refersTo": "pot-lid",
+      "description": "El precio impreso en la tapa, con la etiqueta debajo; packs y planes.",
+      "html": "<div class=\"ds-price\"><span class=\"ds-price-lid\"><span class=\"ds-price-n\">3&nbsp;€</span><span class=\"ds-price-per\">una vez</span></span><span class=\"ds-price-t\">Pack de prueba</span><span class=\"ds-price-m\">≈ 3 modelos, no caducan</span></div>",
+      "css": ".ds-price { display: inline-flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; background: rgb(var(--color-primer, 138 141 143)); color: rgb(var(--color-ink, 28 27 26)); text-align: center; font-variant-numeric: tabular-nums lining-nums; } .ds-price-lid { width: 144px; height: 144px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgb(var(--color-on-accent, 248 243 230)); background: rgb(var(--color-lid-red, 179 38 45)); border: 3px solid color-mix(in srgb, rgb(var(--color-lid-red, 179 38 45)) 72%, black); box-shadow: 0 4px 10px rgb(0 0 0 / 0.22); } .ds-price-n { font: 800 48px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; } .ds-price-per { font: 600 12px/16px \"Inter Variable\", Inter, system-ui, sans-serif; padding-top: 4px; } .ds-price-t { font: 800 24px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; text-transform: uppercase; } .ds-price-m { font: 400 14px/20px \"Inter Variable\", Inter, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Segmentado de tinta",
+      "kind": "chip",
+      "refersTo": "segmented-ink",
+      "description": "Selector de dos opciones sobre imprimación; la activa se invierte a hueso.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button role=\"radio\" aria-checked=\"true\">Alto detalle</button><button role=\"radio\" aria-checked=\"false\">Topología limpia</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 4px; border-radius: 999px; background: rgb(var(--color-ink, 28 27 26) / 0.9); } .ds-seg button { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: rgb(var(--color-bone, 233 227 211)); font: 600 12px/16px \"Inter Variable\", Inter, system-ui, sans-serif; cursor: pointer; } .ds-seg button[aria-checked=\"true\"] { background: rgb(var(--color-bone, 233 227 211)); color: rgb(var(--color-ink, 28 27 26)); } .ds-seg button:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chip (app)",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Filtro u opción en la app oscura; seleccionado en azul de selección.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">4K</button><button class=\"ds-chip\" aria-pressed=\"false\">2K</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgb(var(--color-border, 61 57 52)); background: transparent; color: rgb(var(--color-text-muted, 181 173 157)); font: 500 12px/16px \"Inter Variable\", Inter, system-ui, sans-serif; cursor: pointer; transition: color 120ms cubic-bezier(.2,.8,.2,1); } .ds-chip:hover { color: rgb(var(--color-text, 236 230 214)); } .ds-chip[aria-pressed=\"true\"] { border-color: rgb(var(--color-highlight, 126 164 228)); background: rgb(var(--color-highlight-surface, 31 43 64)); color: rgb(var(--color-text, 236 230 214)); } .ds-chip:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo de la app oscura; el trazo pasa a ámbar con el foco.",
+      "html": "<label class=\"ds-label\">Nombre del modelo<input class=\"ds-field\" placeholder=\"Dragón de miniatura\"></label>",
+      "css": ".ds-label { display: flex; flex-direction: column; gap: 4px; color: rgb(var(--color-text, 236 230 214)); font: 400 14px/20px \"Inter Variable\", Inter, system-ui, sans-serif; } .ds-field { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid rgb(var(--color-border-input, 133 126 115)); background: rgb(var(--color-surface, 31 29 27)); color: rgb(var(--color-text, 236 230 214)); font: 400 14px/20px \"Inter Variable\", Inter, system-ui, sans-serif; caret-color: rgb(var(--color-focus, 227 191 85)); } .ds-field::placeholder { color: rgb(var(--color-text-muted, 181 173 157)); } .ds-field:focus { outline: none; border-color: rgb(var(--color-focus, 227 191 85)); } .ds-field[aria-invalid=\"true\"] { border-color: rgb(var(--color-danger, 255 143 128)); }"
+    },
+    {
+      "name": "Barra de navegación",
+      "kind": "nav",
+      "refersTo": "nav-bar",
+      "description": "Barra flotante en píldora con monograma rojo y enlaces apagados.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-brand\" href=\"#\"><span class=\"ds-mono\">3D</span>My3DStudio</a><a class=\"ds-nav-link\" aria-current=\"page\" href=\"#\">Inicio</a><a class=\"ds-nav-link\" href=\"#\">Mis modelos</a><a class=\"ds-nav-link\" href=\"#\">Precios</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 16px; height: 48px; padding: 0 12px; border-radius: 999px; border: 1px solid rgb(var(--color-border, 61 57 52)); background: rgb(var(--color-surface, 31 29 27) / 0.9); backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(0,0,0,.45); font: 400 14px/20px \"Inter Variable\", Inter, system-ui, sans-serif; } .ds-nav-brand { display: flex; align-items: center; gap: 8px; color: rgb(var(--color-text, 236 230 214)); font-weight: 600; text-decoration: none; } .ds-mono { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--color-lid-red, 179 38 45)); color: rgb(var(--color-on-accent, 248 243 230)); font: 700 12px/1 \"Inter Variable\", Inter, system-ui, sans-serif; } .ds-nav-link { color: rgb(var(--color-text-muted, 181 173 157)); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; } .ds-nav-link:hover { color: rgb(var(--color-text, 236 230 214)); } .ds-nav-link[aria-current=\"page\"] { color: rgb(var(--color-text, 236 230 214)); border-color: rgb(var(--color-text, 236 230 214)); } .ds-nav a:focus-visible { outline: 2px solid rgb(var(--color-focus, 227 191 85)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Renglón de guía",
+      "kind": "card",
+      "refersTo": "pot-lid",
+      "description": "Paso de la guía en papel hueso: bote, título condensado, texto y dato con filete de tinta.",
+      "html": "<div class=\"ds-guide\"><span class=\"ds-guide-lid\">3</span><h3>Textura</h3><p>El color se pinta sobre la malla. Gira el modelo y míralo por todos lados.</p><p class=\"ds-guide-gets\"><b>Obtienes</b>Texturas 2K o 4K, con materiales PBR</p></div>",
+      "css": ".ds-guide { display: grid; grid-template-columns: 64px 1fr 14rem; column-gap: 24px; row-gap: 8px; padding: 24px; border-top: 2px solid rgb(var(--color-ink, 28 27 26) / 0.85); background: rgb(var(--color-bone, 233 227 211)); color: rgb(var(--color-ink, 28 27 26)); font: 400 14px/1.6 \"Inter Variable\", Inter, system-ui, sans-serif; } .ds-guide-lid { grid-row: span 2; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: rgb(var(--color-on-accent, 248 243 230)); font: 800 24px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; background: rgb(var(--color-lid-blue, 47 94 168)); border: 3px solid color-mix(in srgb, rgb(var(--color-lid-blue, 47 94 168)) 72%, black); box-shadow: 0 4px 10px rgb(0 0 0 / 0.22); } .ds-guide h3 { margin: 0; align-self: end; font: 800 30px/1 \"Sofia Sans Extra Condensed\", \"Arial Narrow\", sans-serif; text-transform: uppercase; } .ds-guide p { margin: 0; grid-column: 2; } .ds-guide .ds-guide-gets { grid-column: 3; grid-row: 1 / span 2; border-left: 2px solid rgb(var(--color-ink, 28 27 26) / 0.85); padding-left: 12px; font: 500 12px/16px \"Inter Variable\", Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; align-self: start; } .ds-guide-gets b { display: block; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La guía de pintado",
+    "overview": "Generar un modelo se lee como pintar una miniatura: foto, malla en gris de imprimación, textura terminada y archivo imprimible, con el precio impreso en la tapa del bote. El sistema rechaza el tópico de la categoría (un render brillante flotando sobre negro bajo un titular centrado) y lo sustituye por materiales de taller: grandes campos de gris imprimación mate, páginas de papel hueso como las de un manual de pintado, tinta casi negra para el texto y las líneas guía, y botes de pintura de tapa redonda y saturada como único lenguaje de componente con carácter.\n\nHay dos modos sobre los mismos tokens. Las páginas que persuaden (portada y precios) alternan bandas de imprimación, hueso y tinta a sangre completa, con titulares condensados en mayúsculas y botes grandes que llevan pasos, planes y packs. Las pantallas de trabajo (taller, mis modelos, cuenta) viven en un esquema oscuro de tinta cálida, con contención: superficies escalonadas por tono, Inter en tamaños de panel, y la tapa roja reservada para la acción que cuesta créditos. La densidad es de herramienta, no de folleto.\n\nLas cifras son protagonistas porque son la promesa del producto: créditos, euros, milímetros y polígonos se componen siempre en cifras tabulares, y en el visor se nombran con etiquetas de línea guía como en una lámina técnica. La prueba es siempre real: modelos generados con el motor de producción (fal TRELLIS.2) y la interfaz de verdad.",
+    "keyCharacteristics": [
+      "Gris imprimación, hueso y tinta como suelos de página; tinta cálida oscura para la app.",
+      "El bote de pintura (tapa circular saturada con etiqueta impresa) agrupa pasos, planes y packs.",
+      "Rojo de tapa como color de acción; el resto de tapas (azul, ocre, verde) son color de función, no de acción.",
+      "Voz condensada en mayúsculas para titular; Inter sobria para trabajar.",
+      "Cifras tabulares y líneas guía para todo dato medible.",
+      "Movimiento físico: órbita con inercia, tapas que se hunden al pulsar, una sola entrada orquestada (las tapas se asientan una tras otra y el modelo pasa de imprimación a textura)."
+    ],
+    "rules": [
+      {
+        "name": "La Regla de la Tapa Roja",
+        "body": "El rojo de tapa rellena solo la acción principal de cada vista (normalmente la que gasta créditos o paga). Si una vista tiene dos rellenos rojos que compiten, uno de ellos sobra.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Color de Función",
+        "body": "Azul, ocre y verde de tapa identifican pasos, planes y packs. El color de cada producto es fijo por su id (`web/src/app/data/lids.ts`: free y pack_150 rojo, pack_800 ocre, pro y pack_2600 azul, max y pack_9000 verde) y es el mismo en portada y precios; nunca se asigna por posición. No se usan como color de botón ni de enlace.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Contraste Medido",
+        "body": "Toda pareja de texto o borde nueva se añade a `pairs` en `replica/design/tokens.json` y pasa `contrast.py` (hoy 36 parejas, 0 fallos AA) antes de usarse. Los tokens se cambian en `tokens.json` y se regeneran con `build-tokens.mjs`; nunca hex ni px de diseño en las hojas de estilo.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Voz Condensada",
+        "body": "La condensada titula y rotula cifras; nunca compone párrafos ni etiquetas de formulario. Si un texto tiene más de una línea de lectura, va en Inter.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de las Cifras Tabulares",
+        "body": "Créditos, euros, milímetros y polígonos llevan siempre la clase de cifras tabulares, sea cual sea la familia.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de las Líneas de Lámina",
+        "body": "Las divisiones de contenido en páginas de persuasión son filetes de tinta de 2px (`keyline`, tinta al 85%; 1px entre renglones de una misma lista) o de hueso al 30–40% sobre tinta, nunca tarjetas con borde. Las listas se apilan como renglones de un manual.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla del Objeto Físico",
+        "body": "En las páginas de persuasión solo proyectan sombra los objetos que existirían en un taller (tapas, la hoja de planes, la etiqueta del bote, la cartela). Los bloques de texto no flotan.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** usar los suelos de página (`ground-primer`, `ground-bone`, `ground-ink`) a sangre completa para las páginas que persuaden, alternándolos por banda.",
+      "**Do** imprimir el coste dentro de la acción («Generar · 50 créditos») o en la tapa del bote, siempre antes de que la acción ocurra.",
+      "**Do** dar a cada producto su color de tapa fijo desde `web/src/app/data/lids.ts`, igual en portada y precios; los pasos de la guía son Foto rojo, Malla gris ocre, Textura azul, Archivo verde.",
+      "**Do** componer créditos, euros, milímetros y polígonos con cifras tabulares.",
+      "**Do** cambiar colores, tipos, espacios y sombras en `replica/design/tokens.json`, regenerar con `build-tokens.mjs` y pasar `contrast.py` sin fallos AA.",
+      "**Do** mostrar solo modelos reales generados con el motor de producción, con su procedencia en `web/public/showcase/provenance.json`, rotulados como ejemplos hechos con My3DStudio.",
+      "**Do** respetar `prefers-reduced-motion`: sin giro automático y sin entradas animadas."
+    ],
+    "donts": [
+      "**Don't** usar un amarillo saturado de señal como color de acción o de campo grande: es el color del competidor. El ocre mostaza de tapa y el ámbar de foco son los únicos cálidos amarillentos, y nunca rellenan un botón.",
+      "**Don't** presentar el modelo como un render brillante flotando sobre negro bajo un titular centrado.",
+      "**Don't** usar los colores de tapa azul, ocre o verde para botones o enlaces; son color de función.",
+      "**Don't** meter tarjetas con borde en las páginas de persuasión; se separa con filetes de tinta.",
+      "**Don't** componer párrafos en la condensada ni usar Inter para los titulares de banda.",
+      "**Don't** usar un círculo para algo que no sea un bote, un objeto o el monograma.",
+      "**Don't** inventar testimonios, cifras de usuarios, valoraciones ni logotipos de clientes como prueba visual."
+    ]
+  }
+}
