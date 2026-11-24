@@ -1,0 +1,67 @@
+# My3DStudio en una VM de Oracle Cloud Always Free (ARM). Guía: replica/deploy-oracle.md
+#   cp deploy/oracle/.env.production.example deploy/oracle/.env.production   (y rellénalo)
+#   docker compose --env-file deploy/oracle/.env.production -f deploy/oracle/docker-compose.yml up -d --build
+#   (--env-file hace falta: de ahí salen POSTGRES_PASSWORD y TUNNEL_TOKEN para este archivo)
+#
+# No se publica ningún puerto a internet: el único camino de entrada es el túnel de Cloudflare (cloudflared),
+# que sale hacia Cloudflare y le reenvía las peticiones de api.tudominio.com a la API.
+name: my3dstudio
+
+services:
+  db:
+    image: postgres:17.11-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: my3dstudio
+      POSTGRES_USER: my3dstudio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env.production}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U my3dstudio -d my3dstudio"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # API: atiende la web. Sin trabajador (RUN_WORKER=0).
+  api:
+    build: { context: ../../server, dockerfile: Dockerfile.arm64 }
+    image: my3dstudio-server:latest
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      RUN_WORKER: "0"
+      DATABASE_URL: postgres://my3dstudio:${POSTGRES_PASSWORD}@db:5432/my3dstudio
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      db: { condition: service_healthy }
+
+  # Trabajador: cola de generación (fal), conversiones con Blender y tareas programadas.
+  worker:
+    image: my3dstudio-server:latest
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      RUN_WORKER: "1"
+      DATABASE_URL: postgres://my3dstudio:${POSTGRES_PASSWORD}@db:5432/my3dstudio
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      db: { condition: service_healthy }
+      api: { condition: service_healthy }
+
+  # Túnel de Cloudflare: publica la API en https://api.tudominio.com sin abrir puertos.
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?falta TUNNEL_TOKEN en .env.production}
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  storage:

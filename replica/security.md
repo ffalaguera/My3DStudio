@@ -153,3 +153,42 @@ Angular 22.
 
 **Sesión en `localStorage`** (SDK de Supabase): la CSP mitiga el riesgo. La alternativa, con cookies `httpOnly`
 mediante un backend propio de sesión, es un cambio mayor; valorarlo si la app maneja datos más sensibles.
+
+## Actualización (2026-11-21, tarde): acceso propio y «no perder dinero»
+
+### Acceso propio sin Supabase (`AUTH_PROVIDER=self`)
+Para desplegar en Oracle sin servicios de pago ni pausas por inactividad, el acceso es propio, con
+**Better Auth 1.7.18** (versión fijada con más de dos semanas publicada) sobre tu Postgres (tablas `ba_*`, con RLS).
+
+| petición | cómo queda |
+| --- | --- |
+| **Contraseñas** | Siguen sin existir: solo enlace mágico por email y Google. No hay nada que robar ni que adivinar. |
+| **Enlaces de acceso que caducan** | Caducan a los **10 minutos**, son de **un solo uso** (se consumen al canjearlos) y se guardan **cifrados (hash)** en la base. Probado: reutilizar un enlace o usarlo caducado falla. |
+| **Sesiones** | Token opaco de 30 días en `Authorization: Bearer`, **revocable**: cerrar sesión la borra del servidor (probado: el token deja de valer). Borrar la cuenta borra usuario, sesiones y cuentas vinculadas. |
+| **Cookies / CSRF** | Sigue sin haber cookies: el enlace del email lleva a la web (`/entrar`), que canjea el token por fetch; Google entrega un ID token que la API verifica con Google. CSRF sigue sin aplicar. |
+| **Límite de intentos** | `/api/auth` tiene su propio límite de 30 por minuto y por IP, más el límite interno de Better Auth. |
+| **Redirecciones abiertas** | Tras entrar, la web solo vuelve a rutas propias (`/…`), nunca a otro dominio. |
+| **CSP** | `build:pages` y `build:prod` solo permiten `accounts.google.com` (script, iframe y estilos del botón oficial) si hay `googleClientId`. |
+
+Tests: `server/test/self-auth.test.ts` (8): pedir enlace, canjearlo, un solo uso, caducidad, guardado cifrado,
+cierre de sesión revocado, tokens inventados y borrado de cuenta.
+
+### Fraude y gasto
+- **3D Secure obligatorio** en Checkout: con la verificación del banco, un fraude con tarjeta robada pasa al banco.
+- **Disputas y avisos de fraude** (`charge.dispute.created`, `radar.early_fraud_warning.created`): bloquean la cuenta,
+  retiran sus créditos y se registran (`"sec":"payment_dispute"`). Una cuenta bloqueada no genera ni compra.
+- **Reembolsos** (`charge.refunded`): retiran los créditos de esa compra.
+- **Sin generaciones ni reintentos gratis** y **tope diario** `GENERATION_DAILY_LIMIT` (aviso `"sec":"budget_reached"`
+  una vez al día).
+
+Tests: `server/test/no-loss.test.ts`.
+
+### Producción en Oracle (`deploy/oracle/`)
+- No se publica ningún puerto: entra solo el túnel de Cloudflare.
+- La base y los archivos viven en volúmenes de Docker, accesibles solo por la red interna.
+- La API corre como usuario sin privilegios.
+- Los secretos van en `deploy/oracle/.env.production`, ignorado por git.
+
+Guía: [deploy-oracle.md](deploy-oracle.md).
+
+Con el acceso propio ya no aplica lo pendiente de Supabase de la sección anterior (caducidad OTP y redirect URLs).

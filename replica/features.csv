@@ -1,6 +1,6 @@
 feature,area,priority,original,clone,notes
-Registro e inicio de sesión con email y Google,cuenta,must,yes,partial,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth) | backend: Supabase Auth (enlace mágico + Google) integrado; falta crear el proyecto y las claves
-Créditos gratis al registrarse,cuenta,must,yes,yes,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa | backend: en el primer acceso
+Registro e inicio de sesión con email y Google,cuenta,must,yes,yes,S02; Tripo ofrece además X/Discord/Apple/Microsoft/Facebook | clon: S02 hecho; acceso simulado hasta /replica-backend (Supabase Auth) | backend: Supabase Auth (enlace mágico + Google) integrado; falta crear el proyecto y las claves | acceso propio (Better Auth): enlace mágico de 10 min y un solo uso + Google por ID token; 8 tests; falta probarlo con dominio y Google reales
+Créditos gratis al registrarse,cuenta,must,yes,no,Tripo da 200 créditos al mes en Free | clon: 200 al registrarse; API falsa | backend: en el primer acceso | decisión 2026-11-21: sin generaciones gratis para no perder dinero; pack de prueba de 3 €
 Subir imagen JPG/PNG/WEBP de hasta 20 MB,generación,must,yes,yes,S03; mínimo recomendado 512x512 | clon: clic / arrastrar / pegar; valida tipo / tamaño / mínimo 256 px
 Imagen a 3D,generación,must,yes,yes,F01; núcleo del producto | clon: flujo completo con proveedor falso (objeto procedural); falta el motor real | motor: fal real probado (TRELLIS.2; texto traducido al inglés → FLUX → TRELLIS.2)
 Texto a 3D,generación,must,yes,yes,F02 | clon: flujo completo con proveedor falso; falta el motor real | motor: fal real probado (TRELLIS.2; texto traducido al inglés → FLUX → TRELLIS.2)
@@ -27,7 +27,7 @@ Control de número de polígonos,generación,should,yes,yes,deslizador 500-25000
 Prompt de textura separado,generación,should,yes,partial,si se deja vacío se usa el prompt principal | clon: UI hecha; el proveedor falso lo ignora
 Varias variantes por generación (1/2/4),generación,should,yes,yes,Smart Mesh | clon: selector de variantes en el visor
 Packs de créditos que no caducan,pagos,should,yes,yes,"$10 = 1000 créditos con bonus en packs grandes | clon: la bolsa permanente existe en la API falsa; falta la compra | launch: 3 packs (10/30/90 €), Checkout de pago único y webhook checkout.session.completed; tests"
-Reintentar generación,generación,should,yes,yes,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no | backend: reintentos gratis por plan
+Reintentar generación,generación,should,yes,yes,Tripo da reintentos gratis según el plan | clon: reintentar sí; reintentos gratis por plan no | backend: reintentos gratis por plan | reintentos siempre de pago (sin reintentos gratis); si falla se devuelven los créditos
 Filtros en Mis assets (texturizado / sin textura / rig),assets,should,yes,yes,S06 | clon: sin filtro de rig (no hay rig todavía)
 Exportar USDZ y 3MF,exportación,should,yes,partial,"USDZ para Apple AR y 3MF para impresión con color | clon: USDZ sí; 3MF en servidor | backend: con Blender (BLENDER_PATH) | USDZ con Blender verificado; 3MF generado en el servidor sin color (solo geometría, en mm)"
 Opciones de exportación (incluir texturas),exportación,should,yes,no,S08
@@ -56,3 +56,7 @@ Reembolso automático en 48 h si no se han gastado créditos,pagos,should,no,no,
 Tabla pública de costes en créditos y aviso de 30 días antes de cambiarlos,pagos,should,no,yes,fixes.md F5; tema precio (62) | clon: coste visible antes de generar | launch: /precios con coste por modelo y aviso de 30 días en /terminos
 Un reintento gratis por generación si el modelo sale mal,generación,should,no,no,fixes.md F6; tema calidad (26 + ~15 sin tema)
 Comprobación de imprimibilidad antes de descargar STL/3MF (malla cerrada / tamaño en mm),exportación,should,no,no,fixes.md F8; tema impresión 3D (17)
+"Antifraude: 3D Secure, disputas, avisos de Radar y reembolsos",pagos,must,no,yes,no-loss.test.ts: bloqueo de cuenta y retirada de créditos
+Tope diario de gasto en el motor (GENERATION_DAILY_LIMIT),generación,must,no,yes,no-loss.test.ts; aviso budget_reached una vez al día
+Pack de prueba de 3 € (3 modelos),pagos,should,no,yes,sustituye al plan gratis
+Despliegue gratuito en Oracle Always Free + Cloudflare,plataforma,must,no,partial,deploy/oracle + replica/deploy-oracle.md; falta que el usuario cree las cuentas

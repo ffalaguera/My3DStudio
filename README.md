@@ -12,7 +12,8 @@ descargar en GLB, OBJ, STL, FBX, USDZ o 3MF. Funciona con créditos y planes de 
 - **Exportación** a GLB, OBJ, STL y 3MF en el servidor; FBX y USDZ con Blender sin interfaz.
 - **Cola de tareas** con progreso en directo (SSE), cancelación y reintentos.
 - **Créditos**: se congelan al empezar y se devuelven si la tarea falla; saldo mensual y movimientos.
-- **Planes** Gratis / Pro / Max con Stripe Checkout, portal de cliente y webhooks.
+- **Sin generaciones gratis**: pago por uso con packs que no caducan (desde 3 €) o planes Creador / Estudio, con Stripe
+  Checkout, portal de cliente, 3D Secure, antifraude (disputas, avisos de Radar, reembolsos) y un tope diario de gasto.
 - **Mis assets**: biblioteca con búsqueda, filtros, privacidad por modelo y borrado.
 
 ## Tecnología
@@ -21,9 +22,9 @@ descargar en GLB, OBJ, STL, FBX, USDZ o 3MF. Funciona con créditos y planes de 
 | --- | --- |
 | Frontend (`web/`) | Angular 21 (standalone + signals), Tailwind 3, three.js |
 | API y trabajador (`server/`) | Node 24, Express 5, TypeScript (tsx), zod, pg-boss |
-| Base de datos | PostgreSQL (Supabase en producción; Postgres embebido en desarrollo) |
+| Base de datos | PostgreSQL (en Docker en producción; Postgres embebido en desarrollo) |
 | Motor 3D | [TRELLIS.2](https://github.com/microsoft/TRELLIS) en [fal.ai](https://fal.ai) |
-| Auth / pagos / email / archivos | Supabase Auth, Stripe, Resend, Cloudflare R2 |
+| Auth / pagos / email / archivos | Acceso propio con Better Auth (o Supabase Auth), Stripe, Resend, disco o Cloudflare R2 |
 | Tests | Vitest (servidor), Playwright + axe (extremo a extremo) |
 
 ## Estructura
@@ -89,7 +90,11 @@ npm --prefix e2e ci && npm --prefix e2e test   # Playwright (Edge); arranca base
 
 ## Despliegue
 
-`server/Dockerfile` construye una imagen con Node 24 y Blender 4.5 LTS (verificado por SHA-256). La misma imagen sirve
+**Gratis en Oracle Cloud Always Free** (ARM) + Cloudflare Tunnel + Cloudflare Pages: guía paso a paso en
+[`replica/deploy-oracle.md`](replica/deploy-oracle.md) y archivos en [`deploy/oracle/`](deploy/oracle/). La web se
+compila para Pages con `npm --prefix web run build:pages`.
+
+Para un servidor x86, `server/Dockerfile` construye una imagen con Node 24 y Blender 4.5 LTS (verificado por SHA-256). La misma imagen sirve
 de API (`RUN_WORKER=0`) o de trabajador (`RUN_WORKER=1`):
 
 ```bash
@@ -102,8 +107,8 @@ seguridad, y se sirve como sitio estático. Revisión de seguridad: [`replica/se
 
 ## Estado
 
-Hechas 18 de las 20 funciones imprescindibles. Faltan probar el login real (Supabase + Google) y los pagos con claves
-de Stripe. Detalle en [`replica/backend.md`](replica/backend.md) y [`replica/parity.md`](replica/parity.md).
+Hechas 18 de las 20 funciones imprescindibles. Falta probar en real el acceso (dominio, Resend y Google) y los pagos con
+claves de Stripe. Detalle en [`replica/backend.md`](replica/backend.md) y [`replica/parity.md`](replica/parity.md).
 
 ## Licencias de terceros
 
