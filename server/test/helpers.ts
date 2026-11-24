@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
@@ -11,7 +11,13 @@ import type { Template } from '../src/lib/email.js';
 
 export const WEBHOOK_SECRET = 'whsec_test_secreto_de_pruebas_123456';
 
-export async function makeEnv() {
+/**
+ * Entorno de test sobre la base compartida.
+ * Por defecto fija una tarifa de prueba (plan gratuito con 200 créditos, HD = 15) para probar la lógica.
+ * Con `realPlans` usa la tarifa real de las migraciones de lanzamiento (0003 y 0004) y los costes por defecto.
+ */
+export async function makeEnv(opts: { realPlans?: boolean; env?: Record<string, string> } = {}) {
+  const fixture = opts.realPlans ? {} : { CREDITS_HD: '15', CREDITS_TEXTURE_4K: '10', CREDITS_TEXTURE_8K: '20', CREDITS_SMART_PER_VARIANT: '100' };
   const cfg = loadConfig({
     NODE_ENV: 'test',
     DATABASE_URL: process.env['TEST_DATABASE_URL']!,
@@ -25,12 +31,9 @@ export async function makeEnv() {
     STRIPE_SECRET_KEY: 'sk_test_solo_para_firmas',
     STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
     PROVIDER_MAX_CONCURRENCY: '50',
-    // Precios de prueba fijos: los tests comprueban la lógica (congelar, devolver, renovar), no la tarifa.
-    // La tarifa real está en la migración 0003 y en los valores por defecto de config.ts.
-    CREDITS_HD: '15',
-    CREDITS_TEXTURE_4K: '10',
-    CREDITS_TEXTURE_8K: '20',
-    CREDITS_SMART_PER_VARIANT: '100',
+    GENERATION_DAILY_LIMIT: '0',
+    ...fixture,
+    ...opts.env,
   });
   const sent: { to: string; t: Template }[] = [];
   const ctx: Ctx = createCtx(cfg, {
@@ -38,8 +41,21 @@ export async function makeEnv() {
     stripe: new Stripe(cfg.STRIPE_SECRET_KEY!),
   });
   await migrate(ctx.db, { local: true });
-  await ctx.db.query(`update plans set monthly_credits = case id when 'free' then 200 when 'pro' then 3000 else monthly_credits end,
-                        monthly_export_limit = case id when 'free' then 15 else monthly_export_limit end`);
+  if (opts.realPlans) {
+    // vuelve a aplicar los cambios de tarifa de las migraciones (otro fichero de tests pudo dejar la tarifa de prueba)
+    for (const f of ['0003_launch.sql', '0004_no_loss.sql']) {
+      const sql = readFileSync(join(import.meta.dirname, '..', 'migrations', f), 'utf8').replace(/--.*$/gm, '');
+      for (const stmt of sql.split(';').map((x) => x.trim()).filter((x) => /^(update plans|insert into credit_packs)/i.test(x))) {
+        await ctx.db.query(stmt);
+      }
+    }
+  } else {
+    await ctx.db.query(`update plans set monthly_credits = case id when 'free' then 200 when 'pro' then 3000 else monthly_credits end,
+                          monthly_export_limit = case id when 'free' then 15 else monthly_export_limit end,
+                          free_retries = case id when 'free' then 3 when 'pro' then 20 else null end`);
+    await ctx.db.query(`update plans set name = 'Gratis', history_days = 1, max_saved_models = 10, allow_private = false,
+                          allow_commercial = false, allow_smart_mesh = false, max_texture_resolution = '2k' where id = 'free'`);
+  }
   const app = createApp(ctx);
   return { cfg, ctx, app, sent, api: () => request(app) };
 }

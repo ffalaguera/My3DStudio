@@ -185,7 +185,9 @@ export class Workspace {
       this.select({ tarea: task.id, modelo: null });
       this.toasts.show('info', task.queuePosition ? 'En cola' : 'Generando tu modelo');
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 402 || e.status === 403)) this.gates.showPaywall(e.code as Estimate['reason'], e.message);
+      // una cuenta bloqueada (disputa o fraude) no es un aviso de plan: no se le ofrece comprar
+      if (e instanceof ApiError && e.code === 'account_blocked') this.toasts.show('error', e.message);
+      else if (e instanceof ApiError && (e.status === 402 || e.status === 403)) this.gates.showPaywall(e.code as Estimate['reason'], e.message);
       else this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido crear el modelo. No se te ha cobrado nada');
     } finally {
       this.submitting.set(false);
@@ -206,7 +208,9 @@ export class Workspace {
       const nt = await this.api.retryTask(t.id, crypto.randomUUID());
       this.select({ tarea: nt.id, modelo: null });
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 402 || e.status === 403)) this.gates.showPaywall(e.code as Estimate['reason'], e.message);
+      // una cuenta bloqueada (disputa o fraude) no es un aviso de plan: no se le ofrece comprar
+      if (e instanceof ApiError && e.code === 'account_blocked') this.toasts.show('error', e.message);
+      else if (e instanceof ApiError && (e.status === 402 || e.status === 403)) this.gates.showPaywall(e.code as Estimate['reason'], e.message);
       else this.toasts.show('error', e instanceof ApiError ? e.message : 'No se ha podido reintentar');
     }
   }

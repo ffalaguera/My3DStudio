@@ -95,8 +95,8 @@ describe('packs de créditos (fixes.md F2)', () => {
 
   it('el catálogo de packs es público y trae los de lanzamiento', async () => {
     const packs = (await env.api().get('/api/credit-packs').expect(200)).body.packs as { id: string; credits: number; bonusCredits: number; priceCents: number }[];
-    expect(packs.map((p) => p.id)).toEqual(['pack_800', 'pack_2600', 'pack_9000']);
-    expect(packs[0]).toMatchObject({ credits: 800, bonusCredits: 0, priceCents: 1000 });
+    expect(packs.map((p) => p.id)).toEqual(['pack_150', 'pack_800', 'pack_2600', 'pack_9000']);
+    expect(packs[1]).toMatchObject({ credits: 800, bonusCredits: 0, priceCents: 1000 });
   });
 
   it('comprar un pack exige sesión y un pack a la venta', async () => {

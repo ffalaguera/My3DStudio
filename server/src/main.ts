@@ -6,7 +6,8 @@ import { startWorker } from './jobs/worker.js';
 const cfg = loadConfig();
 const ctx = createCtx(cfg);
 await waitForDb();
-await migrate(ctx.db, { local: cfg.LOCAL_AUTH, log: (m) => console.log(`[db] ${m}`) });
+// auth.users: en Supabase ya existe; en local y con acceso propio lo crea la migración local/0000
+await migrate(ctx.db, { local: cfg.LOCAL_AUTH || cfg.AUTH_PROVIDER === 'self', log: (m) => console.log(`[db] ${m}`) });
 
 /** Si la base aún está arrancando (o reiniciándose), espera hasta 60 s en vez de caerse. */
 async function waitForDb(): Promise<void> {

@@ -46,13 +46,15 @@ test.describe('F02 texto → modelo 3D', () => {
 });
 
 test.describe('F03 topología limpia', () => {
-  test('F03-N1 plan Gratis: aviso de plan', async ({ page }) => {
+  test('F03-N1 pago por uso: más de una variante es de los planes; aviso de plan', async ({ page }) => {
     await page.goto('/crear');
     await signIn(page);
-    await page.getByRole('radio', { name: 'Topología limpia' }).click();
+    await page.getByRole('radio', { name: 'Topología limpia' }).click(); // incluida en pago por uso
+    await page.getByRole('button', { name: 'Topología' }).click();
+    await page.getByRole('radiogroup', { name: 'Variantes' }).getByRole('radio', { name: '2' }).click();
     await page.getByRole('button', { name: /^Generar/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Esto no está en tu plan' });
-    await expect(dialog).toContainText('La topología limpia está en los planes de pago');
+    await expect(dialog).toContainText('Tu plan permite 1 variante por generación');
     expect(await a11y(page, 'dialog[open]'), 'axe S13').toEqual([]);
   });
 
@@ -72,7 +74,7 @@ test.describe('F03 topología limpia', () => {
     await waitForModel(page);
     const variants = page.getByRole('region', { name: 'Resultado' }).getByRole('radiogroup', { name: 'Variantes' });
     await expect(variants.getByRole('radio')).toHaveCount(2);
-    expect(await credits(page)).toBe(2900); // 3000 - 2 variantes × 50
+    expect(await credits(page)).toBe(3000); // 3000 del mes - 2 variantes × 50 + 100 del pack con el que entra
   });
 
   test('F03-E1 polígonos fuera de rango', async ({ page }) => {

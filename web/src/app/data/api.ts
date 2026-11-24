@@ -171,6 +171,8 @@ export abstract class Api {
   /** Con enlace por email puede lanzar ApiError('check_email'): el acceso termina al abrir el enlace. */
   abstract signIn(method: 'google' | 'email', email?: string): Promise<Profile>;
   abstract signOut(): Promise<void>;
+  /** Acceso propio: canjea el token del enlace del email (/entrar). Devuelve la ruta a la que volver. */
+  abstract completeEmailSignIn(token: string): Promise<string>;
 
   // GET /me, /plans, /credits/ledger
   abstract me(): Observable<Me | null>;

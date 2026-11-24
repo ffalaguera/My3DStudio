@@ -23,10 +23,28 @@ export function createProvider(ctx: Ctx): GenerationProvider {
  *  - el tope global del proveedor (PROVIDER_MAX_CONCURRENCY), con prioridad para los planes de pago.
  * `for update skip locked` permite varios trabajadores sin pisarse.
  */
+const budgetAlerted = new WeakMap<object, string>();
+
 export async function dispatch(ctx: Ctx): Promise<string[]> {
   return tx(ctx.db, async (c) => {
     const running = Number((await c.query(`select count(*) from tasks where status = 'running'`)).rows[0].count);
-    const room = ctx.cfg.PROVIDER_MAX_CONCURRENCY - running;
+    let room = ctx.cfg.PROVIDER_MAX_CONCURRENCY - running;
+    if (ctx.cfg.GENERATION_DAILY_LIMIT > 0) {
+      // cada tarea que arranca es una llamada de pago: se cuentan las arrancadas hoy (UTC), terminen como terminen
+      const today = Number((await c.query(
+        `select count(*) from tasks where started_at >= date_trunc('day', now() at time zone 'utc') at time zone 'utc'`)).rows[0].count);
+      const left = ctx.cfg.GENERATION_DAILY_LIMIT - today;
+      if (left <= 0) {
+        const waiting = Number((await c.query(`select count(*) from tasks where status = 'queued'`)).rows[0].count);
+        const day = new Date().toISOString().slice(0, 10);
+        if (waiting && budgetAlerted.get(ctx.security) !== day) { // un aviso por día, no uno por pasada
+          budgetAlerted.set(ctx.security, day);
+          ctx.security.record({ kind: 'budget_reached', detail: `${today} generaciones hoy; ${waiting} esperando` });
+        }
+        return [];
+      }
+      room = Math.min(room, left);
+    }
     if (room <= 0) return [];
     const r = await c.query<{ id: string; user_id: string }>(
       `with candidates as (

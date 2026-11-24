@@ -35,7 +35,22 @@ export function uniqueEmail(label = 'e2e') {
 }
 
 /** Entra con el acceso local (servidor con LOCAL_AUTH=1) usando el modal S02, como un usuario. */
-export async function signIn(page: Page, email = uniqueEmail()) {
+/**
+ * Entra con un usuario nuevo. Como ya no hay generaciones gratis, por defecto el usuario llega con 100 créditos
+ * de pack (como si hubiera comprado), creados por la API antes de entrar para no tener que recargar la página.
+ * `credits: 0` deja la cuenta vacía, como la de alguien recién registrado.
+ */
+export async function signIn(page: Page, email = uniqueEmail(), opts: { credits?: number } = {}) {
+  const credits = opts.credits ?? 100;
+  if (credits > 0) {
+    const r = await fetch('http://localhost:8787/api/dev/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+    });
+    const { token } = (await r.json()) as { token: string };
+    await fetch('http://localhost:8787/api/me', { headers: { Authorization: `Bearer ${token}` } }); // crea el perfil
+    await sql(`update credit_accounts set permanent_balance = $2 where user_id = (select id from profiles where email = $1)`,
+      [email.toLowerCase(), credits]);
+  }
   const dialog = page.getByRole('dialog', { name: 'Entra y empieza a crear' });
   // si una acción ya abrió (o está abriendo) el acceso, no se pulsa Entrar debajo del modal
   const opened = await dialog.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false);

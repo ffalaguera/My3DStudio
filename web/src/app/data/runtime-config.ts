@@ -8,8 +8,10 @@ export interface RuntimeConfig {
   /** fake = demo en el navegador sin servidor; http = API real */
   api: 'fake' | 'http';
   apiUrl?: string;
-  /** local = acceso de desarrollo (LOCAL_AUTH del servidor); supabase = Supabase Auth */
-  auth?: 'local' | 'supabase';
+  /** local = acceso de desarrollo (LOCAL_AUTH del servidor); supabase = Supabase Auth; self = acceso propio (Better Auth) */
+  auth?: 'local' | 'supabase' | 'self';
+  /** Solo con auth=self: el «Client ID» público de tu app OAuth de Google (vacío = sin botón de Google) */
+  googleClientId?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
 }

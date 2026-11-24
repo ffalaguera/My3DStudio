@@ -1,4 +1,4 @@
-import { a11y, chooseImage, expect, setPlan, signIn, sql, test, waitForModel } from './fixtures';
+import { a11y, chooseImage, credits, expect, setPlan, signIn, sql, test, waitForModel } from './fixtures';
 import type { Page } from '@playwright/test';
 
 async function makeModel(page: Page, prompt: string) {
@@ -12,9 +12,7 @@ async function makeModel(page: Page, prompt: string) {
 test.describe('F04 créditos y planes', () => {
   test('F04-N1 sin saldo: aviso con la cifra exacta', async ({ page }) => {
     await page.goto('/crear');
-    const email = await signIn(page);
-    await setPlan(email, 'free', 10);
-    await page.reload();
+    await signIn(page, undefined, { credits: 10 }); // pack con 10 créditos: un modelo cuesta 50
     await chooseImage(page);
     await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
     await page.getByRole('button', { name: /^Generar/ }).click();
@@ -98,12 +96,33 @@ test.describe('F05 mis modelos', () => {
     await expect(page.getByRole('alert').filter({ hasText: 'Este modelo ya no existe' })).toBeVisible();
   });
 
-  test('F05-N1 privado en plan Gratis: aviso de plan', async ({ page }) => {
+  test('F05-N1 sin cuota (pago por uso): lo comprado permite modelos privados', async ({ page }) => {
     await page.goto('/');
     await signIn(page);
     await makeModel(page, 'un plato');
     await page.getByRole('region', { name: 'Resultado' }).getByRole('button', { name: 'Público' }).click();
-    await expect(page.getByRole('dialog', { name: 'Esto no está en tu plan' })).toContainText('Los modelos privados están en los planes de pago');
+    await expect(page.getByRole('status').filter({ hasText: 'Ahora solo tú puedes verlo' })).toBeVisible();
+  });
+
+  test('F04-N2 cuenta nueva: sin créditos gratis; generar lleva a comprar', async ({ page }) => {
+    await page.goto('/crear');
+    await signIn(page, undefined, { credits: 0 });
+    expect(await credits(page)).toBe(0);
+    await page.getByRole('radio', { name: 'Texto' }).click();
+    await page.getByLabel('Describe el objeto').fill('una lámpara');
+    await page.getByRole('button', { name: /^Generar/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'No tienes créditos suficientes' });
+    await expect(dialog).toContainText('Te faltan 50 créditos');
+  });
+
+  test('F04-N3 cuenta bloqueada por una disputa: no puede generar', async ({ page }) => {
+    await page.goto('/crear');
+    const email = await signIn(page);
+    await sql(`update profiles set blocked_at = now(), blocked_reason = 'Disputa de un pago' where email = $1`, [email.toLowerCase()]);
+    await page.getByRole('radio', { name: 'Texto' }).click();
+    await page.getByLabel('Describe el objeto').fill('una lámpara');
+    await page.getByRole('button', { name: /^Generar/ }).click();
+    await expect(page.getByRole('alert').or(page.getByRole('status')).filter({ hasText: 'Tu cuenta está bloqueada' }).first()).toBeVisible();
   });
 
   test('BUG-010 abrir el enlace de un modelo sin sesión y entrar: el modelo se carga sin recargar', async ({ page, browser }) => {

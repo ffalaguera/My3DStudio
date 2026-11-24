@@ -38,11 +38,11 @@ const STORE_KEY = 'my3dstudio:fake-api:v1';
 const TICK_MS = 400;
 const DEMO_SECONDS = { hd: 18, smart: 8 } as const;
 
-// Tarifa de lanzamiento (replica/launch/pricing.md); igual que la migración 0003 del servidor.
+// Tarifa de lanzamiento (replica/launch/pricing.md); igual que las migraciones 0003 y 0004 del servidor.
 const PLANS: PlanLimits[] = [
-  { id: 'free', name: 'Gratis', priceMonthCents: 0, priceYearCents: 0, currency: 'eur', monthlyCredits: 100,
-    maxConcurrentTasks: 1, maxVariants: 1, monthlyExportLimit: null, maxSavedModels: 10, historyDays: 1,
-    maxTextureResolution: '2k', allowPrivate: false, allowCommercial: false, allowSmartMesh: false },
+  { id: 'free', name: 'Pago por uso', priceMonthCents: 0, priceYearCents: 0, currency: 'eur', monthlyCredits: 0,
+    maxConcurrentTasks: 1, maxVariants: 1, monthlyExportLimit: null, maxSavedModels: null, historyDays: 30,
+    maxTextureResolution: '4k', allowPrivate: true, allowCommercial: true, allowSmartMesh: true },
   { id: 'pro', name: 'Creador', priceMonthCents: 1500, priceYearCents: 15000, currency: 'eur', monthlyCredits: 1500,
     maxConcurrentTasks: 5, maxVariants: 4, monthlyExportLimit: null, maxSavedModels: null, historyDays: 7,
     maxTextureResolution: '4k', allowPrivate: true, allowCommercial: true, allowSmartMesh: true },
@@ -52,6 +52,7 @@ const PLANS: PlanLimits[] = [
 ];
 
 const PACKS: CreditPack[] = [
+  { id: 'pack_150', credits: 150, bonusCredits: 0, priceCents: 300, currency: 'eur', purchasable: true },
   { id: 'pack_800', credits: 800, bonusCredits: 0, priceCents: 1000, currency: 'eur', purchasable: true },
   { id: 'pack_2600', credits: 2400, bonusCredits: 200, priceCents: 3000, currency: 'eur', purchasable: true },
   { id: 'pack_9000', credits: 8000, bonusCredits: 1000, priceCents: 9000, currency: 'eur', purchasable: true },
@@ -170,6 +171,10 @@ export class FakeApi extends Api implements OnDestroy {
       }
     });
     return profile;
+  }
+
+  async completeEmailSignIn(): Promise<string> {
+    return '/'; // la demo no envía emails
   }
 
   async signOut(): Promise<void> {

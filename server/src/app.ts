@@ -12,6 +12,8 @@ import { setCreditCosts } from './lib/credits.js';
 import { errorHandler, HttpError } from './lib/http.js';
 import { createStorage } from './lib/storage.js';
 import { createSecurityLog } from './lib/security-log.js';
+import { createSelfAuth } from './lib/self-auth.js';
+import { toNodeHandler } from 'better-auth/node';
 import { accountRoutes } from './routes/account.js';
 import { assetRoutes } from './routes/assets.js';
 import { billingRoutes, stripeWebhook } from './routes/billing.js';
@@ -24,15 +26,21 @@ export function createCtx(cfg: Config, overrides: Partial<Ctx> = {}): Ctx {
   setCreditCosts({ hd: cfg.CREDITS_HD, texture4k: cfg.CREDITS_TEXTURE_4K, texture8k: cfg.CREDITS_TEXTURE_8K,
     smartPerVariant: cfg.CREDITS_SMART_PER_VARIANT });
   const db = overrides.db ?? createPool(cfg.DATABASE_URL);
+  const mailer = overrides.mailer ?? createMailer(cfg);
+  const selfAuth = overrides.selfAuth !== undefined ? overrides.selfAuth
+    : cfg.AUTH_PROVIDER === 'self' && !cfg.LOCAL_AUTH ? createSelfAuth(cfg, db, mailer) : null;
   return {
     cfg,
     db,
     storage: overrides.storage ?? createStorage(cfg),
-    mailer: overrides.mailer ?? createMailer(cfg),
+    mailer,
+    selfAuth,
     security: overrides.security ?? createSecurityLog(),
     stripe: overrides.stripe !== undefined ? overrides.stripe : cfg.STRIPE_SECRET_KEY ? new Stripe(cfg.STRIPE_SECRET_KEY) : null,
     deleteAuthUser: overrides.deleteAuthUser ?? (async (userId) => {
-      if (cfg.LOCAL_AUTH) {
+      if (cfg.LOCAL_AUTH || selfAuth) {
+        // acceso propio: borra usuario, sesiones y cuentas vinculadas (cascada) y la fila de auth.users
+        if (selfAuth) await db.query('delete from ba_user where id = $1', [userId]);
         await db.query('delete from auth.users where id = $1', [userId]);
         return;
       }
@@ -72,6 +80,13 @@ export function createApp(ctx: Ctx) {
   // Sin cookies ni credenciales: el token va en Authorization, así que no hay CSRF posible y solo la app lee las respuestas.
   app.use(cors({ origin: [cfg.APP_URL], credentials: false, allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'], maxAge: 600 }));
 
+  // Acceso propio: Better Auth lee su propio cuerpo, así que va antes del parser JSON. Límite estricto por IP.
+  if (ctx.selfAuth) {
+    app.use('/api/auth', rateLimit({ windowMs: 60_000, limit: cfg.NODE_ENV === 'test' ? 10_000 : 30, standardHeaders: 'draft-7',
+      legacyHeaders: false, handler: (_req, _res, next) => next(new HttpError(429, 'rate_limited', 'Demasiados intentos. Espera un minuto')) }),
+    toNodeHandler(ctx.selfAuth));
+  }
+
   // Webhook antes del parser JSON: Stripe firma el cuerpo crudo.
   app.use('/api/webhooks/stripe', stripeWebhook(ctx));
   if (cfg.STORAGE_DRIVER === 'local') app.use('/files', localFiles(ctx));
@@ -93,7 +108,7 @@ export function createApp(ctx: Ctx) {
       keyGenerator: (req) => req.user?.id ?? req.ip ?? 'anon',
       handler: (_req, _res, next) => next(new HttpError(429, 'rate_limited', 'Demasiadas peticiones. Espera un momento')) });
 
-  const auth = requireUser(cfg, ctx.db);
+  const auth = requireUser(cfg, ctx.db, ctx.selfAuth);
   const events = eventRoutes(ctx);
 
   // Límite global por IP, también para las rutas públicas (planes, packs, capacidades).

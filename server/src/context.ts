@@ -4,6 +4,7 @@ import type { Db } from './db.js';
 import type { Storage } from './lib/storage.js';
 import type { Mailer } from './lib/email.js';
 import type { SecurityLog } from './lib/security-log.js';
+import type { SelfAuth } from './lib/self-auth.js';
 
 export interface Ctx {
   cfg: Config;
@@ -15,4 +16,6 @@ export interface Ctx {
   deleteAuthUser: (userId: string) => Promise<void>;
   /** Registro de actividad sospechosa (lib/security-log.ts). */
   security: SecurityLog;
+  /** Acceso propio (AUTH_PROVIDER=self); null con Supabase o LOCAL_AUTH. */
+  selfAuth: SelfAuth | null;
 }

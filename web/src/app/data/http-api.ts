@@ -4,7 +4,7 @@ import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
   CreditPack, PlanLimits, Privacy, Profile, Task, Upload,
 } from './api';
-import { LocalAuth, SupabaseAuth, type AuthClient } from './auth-client';
+import { LocalAuth, SelfAuth, SupabaseAuth, type AuthClient } from './auth-client';
 import { RUNTIME_CONFIG } from './runtime-config';
 
 const MAX_IMAGE = 20 * 1024 * 1024;
@@ -14,7 +14,8 @@ const MAX_IMAGE = 20 * 1024 * 1024;
 export class HttpApi extends Api implements OnDestroy {
   private readonly cfg = inject(RUNTIME_CONFIG);
   private readonly base = this.cfg.apiUrl!.replace(/\/$/, '');
-  private readonly auth: AuthClient = this.cfg.auth === 'supabase' ? new SupabaseAuth(this.cfg) : new LocalAuth(this.base);
+  private readonly auth: AuthClient = this.cfg.auth === 'supabase' ? new SupabaseAuth(this.cfg)
+    : this.cfg.auth === 'self' ? new SelfAuth(this.base, this.cfg.googleClientId) : new LocalAuth(this.base);
 
   private readonly me$ = new BehaviorSubject<Me | null>(null);
   private readonly tasks$ = new BehaviorSubject<Task[]>([]);
@@ -142,6 +143,11 @@ export class HttpApi extends Api implements OnDestroy {
 
   signIn(method: 'google' | 'email', email?: string): Promise<Profile> {
     return this.auth.signIn(method, email);
+  }
+
+  async completeEmailSignIn(token: string): Promise<string> {
+    if (!(this.auth instanceof SelfAuth)) throw new ApiError(400, 'auth_error', 'Este enlace no es válido aquí');
+    return this.auth.completeEmailSignIn(token);
   }
 
   signOut(): Promise<void> {

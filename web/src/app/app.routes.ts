@@ -12,6 +12,7 @@ export const routes: Routes = [
     data: { icon: 'layout-grid', title: 'La galería llega pronto', text: 'Aquí verás los modelos públicos de la comunidad.' } },
   { path: 'precios', title: 'Planes', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },             // S10 S11
   { path: 'cuenta', title: 'Tu cuenta', loadComponent: () => import('./pages/account').then((m) => m.Account) },           // S12
+  { path: 'entrar', title: 'Entrando', loadComponent: () => import('./pages/sign-in-link').then((m) => m.SignInLink) },
   { path: 'privacidad', title: 'Privacidad', data: { doc: 'privacy' }, loadComponent: () => import('./pages/legal').then((m) => m.Legal) },
   { path: 'terminos', title: 'Términos', data: { doc: 'terms' }, loadComponent: () => import('./pages/legal').then((m) => m.Legal) },
   { path: '**', title: 'No encontrado', loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),

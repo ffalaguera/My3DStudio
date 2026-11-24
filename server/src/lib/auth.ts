@@ -4,6 +4,7 @@ import type { Config } from '../config.js';
 import type { Db, Tx } from '../db.js';
 import { tx } from '../db.js';
 import { HttpError } from './http.js';
+import type { SelfAuth } from './self-auth.js';
 
 export interface AuthUser {
   id: string;
@@ -72,14 +73,25 @@ export async function ensureProfile(c: Tx, user: AuthUser): Promise<void> {
      values ($1, $2, date_trunc('month', now() at time zone 'utc') at time zone 'utc' + interval '1 month')`,
     [user.id, free],
   );
-  await c.query(
-    `insert into credit_ledger (user_id, bucket, delta, reason, note) values ($1, 'monthly', $2, 'grant', 'Créditos de bienvenida')`,
-    [user.id, free],
-  );
+  if (free > 0) {
+    await c.query(
+      `insert into credit_ledger (user_id, bucket, delta, reason, note) values ($1, 'monthly', $2, 'grant', 'Créditos de bienvenida')`,
+      [user.id, free],
+    );
+  }
 }
 
-export function requireUser(cfg: Config, db: Db) {
-  const verify = createVerifier(cfg);
+/** Acceso propio: el token es una sesión de Better Auth (revocable), no un JWT. */
+function selfVerifier(selfAuth: SelfAuth) {
+  return async (token: string): Promise<AuthUser> => {
+    const s = await selfAuth.api.getSession({ headers: new Headers({ authorization: `Bearer ${token}` }) }).catch(() => null);
+    if (!s?.user?.email) throw new HttpError(401, 'not_signed_in', 'Tu sesión ha caducado. Vuelve a entrar');
+    return { id: s.user.id, email: s.user.email };
+  };
+}
+
+export function requireUser(cfg: Config, db: Db, selfAuth: SelfAuth | null = null) {
+  const verify = selfAuth ? selfVerifier(selfAuth) : createVerifier(cfg);
   const known = new Set<string>(); // perfiles ya comprobados en este proceso
   const mw = async (req: Request, _res: Response, next: NextFunction) => {
     try {

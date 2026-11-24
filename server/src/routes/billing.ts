@@ -20,6 +20,15 @@ async function customerFor(ctx: Ctx, userId: string, email: string): Promise<str
   return (await ctx.db.query('select stripe_customer_id from profiles where id = $1', [userId])).rows[0].stripe_customer_id;
 }
 
+/** Una cuenta bloqueada por disputa o fraude no puede volver a comprar. */
+async function assertNotBlocked(ctx: Ctx, userId: string): Promise<void> {
+  const p = await ctx.db.query('select blocked_at from profiles where id = $1', [userId]);
+  if (p.rows[0]?.blocked_at) throw new HttpError(403, 'account_blocked', 'Tu cuenta está bloqueada por una incidencia con un pago. Escríbenos para resolverlo');
+}
+
+/** 3D Secure siempre: el banco del titular confirma el pago y, si es fraude, la responsabilidad pasa al banco. */
+const SCA = { card: { request_three_d_secure: 'any' as const } };
+
 /** Rutas autenticadas: Checkout para suscribirse, Customer Portal para cambiar o cancelar (un clic). */
 export function billingRoutes(ctx: Ctx) {
   const r = Router();
@@ -33,6 +42,7 @@ export function billingRoutes(ctx: Ctx) {
     const live = await ctx.db.query(
       `select 1 from subscriptions where user_id = $1 and status in ('active','trialing','past_due')`, [req.user!.id]);
     if (live.rowCount) throw new HttpError(409, 'already_subscribed', 'Ya tienes un plan. Cámbialo desde tu cuenta');
+    await assertNotBlocked(ctx, req.user!.id);
     const customer = await customerFor(ctx, req.user!.id, req.user!.email);
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -40,6 +50,7 @@ export function billingRoutes(ctx: Ctx) {
       client_reference_id: req.user!.id,
       line_items: [{ price, quantity: 1 }],
       subscription_data: { metadata: { user_id: req.user!.id } },
+      payment_method_options: SCA,
       success_url: `${ctx.cfg.APP_URL}/cuenta?pago=ok`,
       cancel_url: `${ctx.cfg.APP_URL}/precios`,
       allow_promotion_codes: true,
@@ -55,6 +66,7 @@ export function billingRoutes(ctx: Ctx) {
     const pack = await ctx.db.query('select id, stripe_price_id from credit_packs where id = $1 and is_active', [body.packId]);
     const price = pack.rows[0]?.stripe_price_id;
     if (!price) throw new HttpError(404, 'not_found', 'Ese pack no está a la venta');
+    await assertNotBlocked(ctx, req.user!.id);
     const customer = await customerFor(ctx, req.user!.id, req.user!.email);
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -62,6 +74,9 @@ export function billingRoutes(ctx: Ctx) {
       client_reference_id: req.user!.id,
       line_items: [{ price, quantity: 1 }],
       metadata: { user_id: req.user!.id, pack_id: body.packId },
+      // también en el pago: los reembolsos y disputas llegan con el payment_intent
+      payment_intent_data: { metadata: { user_id: req.user!.id, pack_id: body.packId } },
+      payment_method_options: SCA,
       success_url: `${ctx.cfg.APP_URL}/cuenta?pack=ok`,
       cancel_url: `${ctx.cfg.APP_URL}/precios`,
       automatic_tax: { enabled: false },
@@ -94,6 +109,31 @@ async function userForCustomer(c: Tx, customer: string | Stripe.Customer | Strip
   const id = typeof customer === 'string' ? customer : customer?.id;
   if (!id) return null;
   return (await c.query('select id from profiles where stripe_customer_id = $1', [id])).rows[0]?.id ?? null;
+}
+
+/** Usuario de un pago: por la tabla payments (packs) o por el cliente de Stripe del cargo. */
+async function userForPayment(c: Tx, pi: string | { id: string } | null | undefined,
+  charge: string | { id: string; customer?: string | null } | undefined): Promise<string | null> {
+  const piId = typeof pi === 'string' ? pi : pi?.id;
+  if (piId) {
+    const p = await c.query('select user_id from payments where payment_intent = $1', [piId]);
+    if (p.rowCount) return p.rows[0].user_id;
+  }
+  return typeof charge === 'object' && charge?.customer ? userForCustomer(c, charge.customer) : null;
+}
+
+/** Bloquea la cuenta y deja sus créditos a cero (con su apunte en el historial). */
+async function blockAndRevoke(c: Tx, userId: string, reason: string): Promise<void> {
+  await c.query('update profiles set blocked_at = coalesce(blocked_at, now()), blocked_reason = $2 where id = $1', [userId, reason]);
+  const a = (await c.query('select monthly_balance, permanent_balance from credit_accounts where user_id = $1 for update', [userId])).rows[0];
+  if (!a) return;
+  for (const [bucket, amount] of [['monthly', a.monthly_balance], ['permanent', a.permanent_balance]] as const) {
+    if (amount > 0) {
+      await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note) values ($1,$2,$3,'adjust',$4)`,
+        [userId, bucket, -amount, `Retirados: ${reason.toLowerCase()}`]);
+    }
+  }
+  await c.query('update credit_accounts set monthly_balance = 0, permanent_balance = 0 where user_id = $1', [userId]);
 }
 
 /** Aplica un evento ya verificado. Idempotente: el id del evento se guarda en la misma transacción. */
@@ -169,6 +209,41 @@ export async function handleStripeEvent(ctx: Ctx, event: Stripe.Event): Promise<
         await c.query('update credit_accounts set permanent_balance = permanent_balance + $2 where user_id = $1', [userId, total]);
         await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note,stripe_event_id) values ($1,'permanent',$2,'purchase',$3,$4)`,
           [userId, total, `Pack de ${pack.credits}${pack.bonus_credits ? ` + ${pack.bonus_credits} de regalo` : ''} créditos`, event.id]);
+        const pi = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id;
+        if (pi) {
+          await c.query(`insert into payments (payment_intent, user_id, kind, pack_id, credits) values ($1,$2,'pack',$3,$4) on conflict do nothing`,
+            [pi, userId, packId, total]);
+        }
+        return 'processed';
+      }
+      case 'charge.dispute.created':
+      case 'radar.early_fraud_warning.created': {
+        // Chargeback o aviso de fraude del banco: se bloquea la cuenta y se retiran sus créditos para que no genere más.
+        const o = event.data.object as { payment_intent?: string | { id: string } | null; charge?: string | { id: string; customer?: string | null } };
+        const userId = await userForPayment(c, o.payment_intent, o.charge);
+        if (!userId) return 'ignored';
+        await blockAndRevoke(c, userId, event.type === 'charge.dispute.created' ? 'Disputa de un pago' : 'Aviso de fraude del banco');
+        ctx.security.record({ kind: 'payment_dispute', userId, detail: event.type });
+        return 'processed';
+      }
+      case 'charge.refunded': {
+        // Reembolso (lo haces tú desde Stripe): se retiran los créditos de esa compra que queden sin gastar.
+        const ch = event.data.object as Stripe.Charge;
+        const pi = typeof ch.payment_intent === 'string' ? ch.payment_intent : ch.payment_intent?.id;
+        const pay = pi ? (await c.query('select user_id, kind, credits from payments where payment_intent = $1', [pi])).rows[0] : null;
+        const userId = pay?.user_id ?? (await userForCustomer(c, ch.customer));
+        if (!userId) return 'ignored';
+        const a = (await c.query('select monthly_balance, permanent_balance from credit_accounts where user_id = $1 for update', [userId])).rows[0];
+        if (!a) return 'ignored';
+        const bucket = pay?.kind === 'pack' ? 'permanent' : 'monthly';
+        const have = bucket === 'permanent' ? a.permanent_balance : a.monthly_balance;
+        const take = Math.min(have, pay?.kind === 'pack' ? pay.credits : have);
+        if (take > 0) {
+          await c.query(`update credit_accounts set ${bucket}_balance = ${bucket}_balance - $2 where user_id = $1`, [userId, take]);
+          await c.query(`insert into credit_ledger (user_id,bucket,delta,reason,note) values ($1,$2,$3,'adjust','Reembolso de un pago')`,
+            [userId, bucket, -take]);
+        }
+        ctx.security.record({ kind: 'payment_refund', userId, detail: `${take} créditos retirados` });
         return 'processed';
       }
       case 'invoice.payment_failed': {

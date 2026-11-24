@@ -5,7 +5,9 @@ import { spawn } from 'node:child_process';
 
 const child = spawn(process.execPath, ['--watch', '--env-file-if-exists=.env.local', '--import', 'tsx', 'src/main.ts'], {
   stdio: 'inherit',
-  env: { ...process.env, GENERATION_PROVIDER: 'fake' },
+  // el motor de demostración no cuesta nada: sin tope diario de generaciones
+  // (ni tope de tareas simultáneas: unas tareas huérfanas de una pasada cortada no deben bloquear la cola)
+  env: { ...process.env, GENERATION_PROVIDER: 'fake', GENERATION_DAILY_LIMIT: '0', PROVIDER_MAX_CONCURRENCY: '50' },
 });
 for (const s of ['SIGINT', 'SIGTERM']) process.on(s, () => child.kill(s));
 child.on('exit', (code) => process.exit(code ?? 0));

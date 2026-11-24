@@ -22,6 +22,10 @@ async function createTask(c: Tx, userId: string, req: TaskRequest, key: string, 
     const up = await c.query(`select status from uploads where id = $1 and user_id = $2`, [req.uploadId, userId]);
     if (!up.rowCount || up.rows[0].status !== 'ready') throw new HttpError(422, 'upload_required', 'Sube una imagen válida');
   }
+  const blocked = await c.query('select blocked_at from profiles where id = $1', [userId]);
+  if (blocked.rows[0]?.blocked_at) {
+    throw new HttpError(403, 'account_blocked', 'Tu cuenta está bloqueada por una incidencia con un pago. Escríbenos para resolverlo');
+  }
   const est = await evaluate(c, userId, req, { free: opts.free });
   if (!est.allowed) throw new HttpError(est.reason === 'insufficient_credits' ? 402 : 403, est.reason!, est.detail!);
   const params = { ...req.params, variants: req.series === 'smart' ? req.params.variants : 1 };
@@ -86,7 +90,7 @@ export function taskRoutes(ctx: Ctx) {
     res.json({ task });
   });
 
-  /** Repite una tarea con los mismos datos. Gratis si al plan le quedan reintentos este mes. */
+  /** Repite una tarea con los mismos datos. Se paga como una generación nueva: cada intento es una llamada de pago al motor. */
   r.post('/:id/retry', async (req, res) => {
     const id = uuid.parse(req.params.id);
     const key = idemKey.parse(req.header('Idempotency-Key'));
@@ -97,16 +101,11 @@ export function taskRoutes(ctx: Ctx) {
          from tasks t where t.id = $1 and t.user_id = $2`, [id, userId]);
       assertOwner(t, 'La tarea no existe');
       const o = t.rows[0];
-      const plan = await c.query('select p.free_retries from plans p join profiles u on u.plan_id = p.id where u.id = $1', [userId]);
-      const used = await c.query(
-        `select count(*) from tasks where user_id = $1 and is_free_retry and created_at >= date_trunc('month', now())`, [userId]);
-      const limit = plan.rows[0].free_retries as number | null;
-      const free = o.status === 'success' && (limit === null || Number(used.rows[0].count) < limit);
       const body = taskRequestSchema.parse({
         type: o.type, series: o.series, prompt: o.prompt ?? undefined, texturePrompt: o.texture_prompt ?? undefined,
         uploadId: o.upload_id ?? undefined, params: o.params, privacy: o.privacy,
       });
-      return createTask(c, userId, body, key, { retryOf: id, free });
+      return createTask(c, userId, body, key, { retryOf: id, free: false });
     });
     const [task] = await ser.tasks(db, storage, 't.id = $1', [newId]);
     res.status(201).json({ task });

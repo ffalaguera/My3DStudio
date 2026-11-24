@@ -14,16 +14,19 @@ const supabase = origin(cfg.supabaseUrl);
 const storage = process.argv[3] ?? process.env.STORAGE_ORIGIN ?? null;
 if (cfg.api === 'http' && !api) throw new Error('config.json: falta apiUrl');
 const prod = !!api?.startsWith('https://');
-if (prod && cfg.auth !== 'supabase') throw new Error('config.json de producción con auth distinto de supabase');
+if (prod && !['supabase', 'self'].includes(cfg.auth)) throw new Error('config.json de producción: auth tiene que ser self o supabase');
+// Acceso con Google (auth=self): el script, el iframe y los estilos del botón oficial salen de accounts.google.com
+const google = cfg.auth === 'self' && cfg.googleClientId ? 'https://accounts.google.com' : null;
 // En local, Supabase no está; el almacén lo sirve la propia API (/files).
 const files = [api, storage].filter(Boolean);
-const connect = ["'self'", api, supabase, supabase?.replace('https://', 'wss://'), ...files].filter(Boolean);
+const connect = ["'self'", api, supabase, supabase?.replace('https://', 'wss://'), google, ...files].filter(Boolean);
 
 const csp = [
   "default-src 'self'",
-  "script-src 'self'",
+  `script-src 'self'${google ? ` ${google}/gsi/client` : ''}`,
   // Angular añade estilos de componente en <style>; sin scripts en línea, esto no abre la puerta al XSS.
-  "style-src 'self' 'unsafe-inline'",
+  `style-src 'self' 'unsafe-inline'${google ? ` ${google}/gsi/style` : ''}`,
+  ...(google ? [`frame-src ${google}/gsi/`] : []),
   `img-src 'self' data: blob: ${files.join(' ')}`.trim(),
   "font-src 'self'",
   `connect-src ${[...new Set(connect)].join(' ')} blob:`,

@@ -23,7 +23,7 @@ for (const [plan, interval] of [['pro', 'month'], ['pro', 'year'], ['max', 'mont
 }
 
 // 1b. Ids de precio de Stripe de los packs de créditos (pago único).
-for (const pack of ['pack_800', 'pack_2600', 'pack_9000']) {
+for (const pack of ['pack_150', 'pack_800', 'pack_2600', 'pack_9000']) {
   const env = process.env[`STRIPE_PRICE_${pack.toUpperCase()}`];
   if (env) {
     await ctx.db.query('update credit_packs set stripe_price_id = $2 where id = $1', [pack, env]);

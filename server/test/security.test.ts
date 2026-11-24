@@ -159,6 +159,16 @@ describe('HTTPS y configuración de producción', () => {
   it('una configuración de producción correcta carga', () => {
     expect(() => loadConfig(prod)).not.toThrow();
   });
+  it('producción en Oracle: base interna de Docker sin TLS, acceso propio y archivos en un volumen', () => {
+    const { SUPABASE_URL: _s, STORAGE_DRIVER: _d, R2_ACCOUNT_ID: _a, R2_ACCESS_KEY_ID: _b, R2_SECRET_ACCESS_KEY: _c, R2_BUCKET: _e, ...rest } = prod;
+    const oracle = { ...rest, DATABASE_URL: 'postgres://u:p@db:5432/my3dstudio', AUTH_PROVIDER: 'self', BETTER_AUTH_SECRET: 'q'.repeat(40),
+      STORAGE_DRIVER: 'local', LOCAL_STORAGE_DIR: '/data/storage', FILE_URL_SECRET: 'f'.repeat(40),
+      EMAIL_DRIVER: 'resend', RESEND_API_KEY: 're_x' };
+    expect(() => loadConfig(oracle)).not.toThrow();
+    expect(() => loadConfig({ ...oracle, LOCAL_STORAGE_DIR: '.data/storage' })).toThrow(/LOCAL_STORAGE_DIR/);
+    expect(() => loadConfig({ ...oracle, EMAIL_DRIVER: 'console' })).toThrow(/EMAIL_DRIVER/); // nadie recibiría el enlace
+    expect(() => loadConfig({ ...oracle, BETTER_AUTH_SECRET: undefined as unknown as string })).toThrow(/BETTER_AUTH_SECRET/);
+  });
   it.each([
     ['APP_URL sin https', { APP_URL: 'http://app.example.com' }, /APP_URL/],
     ['API sin https', { PUBLIC_API_URL: 'http://api.example.com' }, /PUBLIC_API_URL/],

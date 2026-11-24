@@ -5,7 +5,8 @@
  * (replica/security.md). Sin datos personales: la IP se recorta (IPv4 /24, IPv6 /48) y no se guardan emails.
  */
 export type SecurityKind =
-  | 'auth_failed' | 'rate_limited' | 'bad_signature' | 'forbidden' | 'bad_input' | 'payment_mismatch' | 'not_found_probe';
+  | 'auth_failed' | 'rate_limited' | 'bad_signature' | 'forbidden' | 'bad_input' | 'payment_mismatch' | 'not_found_probe'
+  | 'payment_dispute' | 'payment_refund' | 'budget_reached';
 
 export interface SecurityEvent {
   kind: SecurityKind;

@@ -22,6 +22,7 @@
     "@aws-sdk/s3-request-presigner": "^3.709.0",
     "@gltf-transform/core": "^4.1.1",
     "@gltf-transform/extensions": "^4.1.1",
+    "better-auth": "1.7.18",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^7.5.0",
