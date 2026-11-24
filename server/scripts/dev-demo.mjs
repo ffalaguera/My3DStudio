@@ -7,7 +7,11 @@ const child = spawn(process.execPath, ['--watch', '--env-file-if-exists=.env.loc
   stdio: 'inherit',
   // el motor de demostración no cuesta nada: sin tope diario de generaciones
   // (ni tope de tareas simultáneas: unas tareas huérfanas de una pasada cortada no deben bloquear la cola)
-  env: { ...process.env, GENERATION_PROVIDER: 'fake', GENERATION_DAILY_LIMIT: '0', PROVIDER_MAX_CONCURRENCY: '50' },
+  // tienda: sin tope de modelos gratis (los e2e crean muchos) y un email de taller para probar el panel
+  env: {
+    ...process.env, GENERATION_PROVIDER: 'fake', GENERATION_DAILY_LIMIT: '0', PROVIDER_MAX_CONCURRENCY: '50',
+    GENERATION_FREE_PER_DAY: process.env.GENERATION_FREE_PER_DAY ?? '0', ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? 'taller@example.com',
+  },
 });
 for (const s of ['SIGINT', 'SIGTERM']) process.on(s, () => child.kill(s));
 child.on('exit', (code) => process.exit(code ?? 0));

@@ -12,6 +12,7 @@ import { Icon } from '../../ui/icon';
 import { Viewer } from '../viewer/viewer';
 import { Dropzone } from './dropzone';
 import { ExportModal } from './export-modal';
+import { OrderModal } from '../shop/order-modal';
 import { Handoff } from './handoff';
 
 const TOOLS = [
@@ -26,7 +27,7 @@ const TOOLS = [
 /** S03 configurar, S04 generando, S05 resultado. Ruta /crear?serie=hd|smart&modelo=<id>&tarea=<id> */
 @Component({
   selector: 'app-workspace',
-  imports: [Icon, Viewer, Dropzone, ExportModal, FormsModule, DecimalPipe, DatePipe, RouterLink],
+  imports: [Icon, Viewer, Dropzone, ExportModal, OrderModal, FormsModule, DecimalPipe, DatePipe, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   templateUrl: './workspace.html',
@@ -74,6 +75,13 @@ export class Workspace {
   protected readonly asset = signal<Asset | null>(null);
   protected readonly assetError = signal('');
   protected readonly exporting = signal<Asset | null>(null);
+  protected readonly ordering = signal<Asset | null>(null);
+  /** Tienda: generar gratis y pedir la figura impresa (sin descargas). */
+  protected readonly shop = signal(true);
+  protected readonly freeLeft = computed(() => {
+    const g = this.gates.me()?.generations;
+    return g?.perDay ? { left: Math.max(0, g.perDay - g.today), perDay: g.perDay } : null;
+  });
   protected readonly renaming = signal(false);
   protected readonly nameDraft = signal('');
   protected readonly variants = computed(() => {
@@ -82,6 +90,7 @@ export class Workspace {
   });
 
   constructor() {
+    void this.api.capabilities().then((c) => this.shop.set(c.businessModel === 'shop'));
     // serie desde el menú "Crear"
     effect(() => {
       const s = this.query().get('serie');

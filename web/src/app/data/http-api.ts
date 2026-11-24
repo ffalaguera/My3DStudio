@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, distinctUntilChanged, filter, from, map, merge, startWith, switchMap } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  CreditPack, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
+  Catalog, CreditPack, Order, OrderRequest, OrderStatus, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
 } from './api';
 import { LocalAuth, SelfAuth, SupabaseAuth, type AuthClient } from './auth-client';
 import { RUNTIME_CONFIG } from './runtime-config';
@@ -131,9 +131,9 @@ export class HttpApi extends Api implements OnDestroy {
 
   // ------------------------------------------------------------------ Api
   capabilities(): Promise<Capabilities> {
-    this.caps ??= this.req<{ exportFormats: ExportFormat[]; billing: boolean }>('GET', '/capabilities')
-      .then((c) => ({ exportFormats: c.exportFormats, billing: c.billing ? 'stripe' : 'off' }) as Capabilities)
-      .catch(() => ({ exportFormats: ['glb'], billing: 'off' }) as Capabilities);
+    this.caps ??= this.req<{ exportFormats: ExportFormat[]; billing: boolean; businessModel?: 'shop' | 'credits' }>('GET', '/capabilities')
+      .then((c) => ({ exportFormats: c.exportFormats, billing: c.billing ? 'stripe' : 'off', businessModel: c.businessModel ?? 'credits' }) as Capabilities)
+      .catch(() => ({ exportFormats: ['glb'], billing: 'off', businessModel: 'shop' }) as Capabilities);
     return this.caps;
   }
 
@@ -253,6 +253,42 @@ export class HttpApi extends Api implements OnDestroy {
     await this.req('DELETE', `/assets/${id}`);
     this.assetsChanged$.next();
     void this.refreshMe();
+  }
+
+  // ------------------------------------------------------------------ tienda
+  private cat?: Promise<Catalog>;
+  catalog(): Promise<Catalog> {
+    this.cat ??= this.req<Catalog>('GET', '/shop/catalog');
+    this.cat.catch(() => (this.cat = undefined));
+    return this.cat;
+  }
+
+  createOrder(req: OrderRequest): Promise<{ order: Order; url: string }> {
+    return this.req('POST', '/orders', req);
+  }
+
+  async orders(): Promise<Order[]> {
+    return (await this.req<{ orders: Order[] }>('GET', '/orders')).orders;
+  }
+
+  async order(id: string): Promise<Order> {
+    return (await this.req<{ order: Order }>('GET', `/orders/${id}`)).order;
+  }
+
+  async demoPay(id: string): Promise<Order> {
+    return (await this.req<{ order: Order }>('POST', `/orders/${id}/demo-pay`)).order;
+  }
+
+  async adminOrders(status: 'open' | 'all' | OrderStatus): Promise<Order[]> {
+    return (await this.req<{ orders: Order[] }>('GET', `/admin/orders?status=${status}`)).orders;
+  }
+
+  async adminUpdateOrder(id: string, patch: { status?: 'printing' | 'shipped' | 'cancelled'; tracking?: string; note?: string }): Promise<Order> {
+    return (await this.req<{ order: Order }>('PATCH', `/admin/orders/${id}`, patch)).order;
+  }
+
+  adminOrderFile(id: string, format: 'stl' | '3mf'): Promise<{ url: string; filename: string; print: PrintReport }> {
+    return this.req('POST', `/admin/orders/${id}/file`, { format });
   }
 
   previewImage(prompt: string): Promise<Upload> {

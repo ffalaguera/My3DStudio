@@ -2,7 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, distinctUntilChanged, filter, map } from 'rxjs';
 import {
   Api, ApiError, Asset, AssetFilter, Capabilities, CreateTaskRequest, Estimate, ExportFormat, LedgerEntry, Me,
-  CreditPack, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
+  Catalog, CreditPack, Order, OrderRequest, OrderStatus, PlanLimits, PrintOptions, PrintReport, Privacy, Profile, Task, Upload,
 } from './api';
 import type { ModelSpec } from './fake-model';
 import type * as THREE from 'three';
@@ -145,7 +145,7 @@ export class FakeApi extends Api implements OnDestroy {
   }
 
   async capabilities(): Promise<Capabilities> {
-    return { exportFormats: ['glb', 'obj', 'stl', 'usdz'], billing: 'simulated' };
+    return { exportFormats: ['glb', 'obj', 'stl', 'usdz'], billing: 'simulated', businessModel: 'credits' };
   }
 
   async billingPortal(): Promise<void> {
@@ -506,6 +506,19 @@ export class FakeApi extends Api implements OnDestroy {
     this.models.delete(assetId);
     this.commit((s) => (s.assets = s.assets.filter((a) => a.id !== assetId)));
   }
+
+  // La tienda necesita el servidor (pedidos, pagos y el taller). Sin él, se dice claramente.
+  private noShop(): never {
+    throw new ApiError(503, 'shop_offline', 'La tienda necesita el servidor. Arranca la API para pedir figuras');
+  }
+  catalog(): Promise<Catalog> { return Promise.reject(new ApiError(503, 'shop_offline', 'La tienda necesita el servidor')); }
+  async createOrder(_req: OrderRequest): Promise<{ order: Order; url: string }> { return this.noShop(); }
+  async orders(): Promise<Order[]> { return []; }
+  async order(_id: string): Promise<Order> { return this.noShop(); }
+  async demoPay(_id: string): Promise<Order> { return this.noShop(); }
+  async adminOrders(_s: 'open' | 'all' | OrderStatus): Promise<Order[]> { return []; }
+  async adminUpdateOrder(_id: string, _p: object): Promise<Order> { return this.noShop(); }
+  async adminOrderFile(_id: string, _f: 'stl' | '3mf'): Promise<{ url: string; filename: string; print: PrintReport }> { return this.noShop(); }
 
   /** Modo sin servidor: un disco de color según el texto (lo que hace el motor de demostración). */
   async previewImage(prompt: string): Promise<Upload> {

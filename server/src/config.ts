@@ -57,6 +57,13 @@ const schema = z
     GENERATION_DAILY_LIMIT: z.coerce.number().int().min(0).default(20),
     // Vista previa (solo la imagen, ≈ 0,003 € con fal): tope por persona y día para que no se use como generador de imágenes gratis
     PREVIEW_DAILY_LIMIT: z.coerce.number().int().min(0).default(30),
+    // Modelo de negocio. shop: generar es gratis (con tope) y se venden figuras impresas; nunca se entregan archivos.
+    // credits: el modelo anterior (créditos, planes y descargas). Se conserva para poder volver atrás.
+    BUSINESS_MODEL: z.enum(['shop', 'credits']).default('shop'),
+    // Tienda: generaciones gratis por persona y día (cada una cuesta ~0,28 € con fal). 0 = sin tope.
+    GENERATION_FREE_PER_DAY: z.coerce.number().int().min(0).default(3),
+    // Emails con acceso al panel del taller (pedidos y archivos para imprimir), separados por comas.
+    ADMIN_EMAILS: z.string().default(''),
     BLENDER_PATH: z.string().optional(),
   })
   .superRefine((c, ctx) => {

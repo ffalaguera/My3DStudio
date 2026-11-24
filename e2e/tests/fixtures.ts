@@ -61,7 +61,8 @@ export async function signIn(page: Page, email = uniqueEmail(), opts: { credits?
   await dialog.getByLabel('Email').fill(email);
   await dialog.getByRole('button', { name: 'Recibir enlace de acceso' }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole('link', { name: /Créditos disponibles/ })).toBeVisible();
+  // tienda: con sesión, la barra enseña Mis pedidos (ya no hay contador de créditos)
+  await expect(page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Mis pedidos' })).toBeVisible();
   return email;
 }
 
@@ -132,5 +133,5 @@ export async function a11y(page: Page, include?: string) {
 
 /** Espera a que la tarea seleccionada termine y el visor muestre el modelo. */
 export async function waitForModel(page: Page) {
-  await expect(page.getByRole('region', { name: 'Resultado' }).getByRole('button', { name: 'Exportar' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('region', { name: 'Resultado' }).getByRole('button', { name: 'Pedir impresa' })).toBeVisible({ timeout: 45_000 });
 }

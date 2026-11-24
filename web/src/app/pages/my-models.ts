@@ -10,13 +10,14 @@ import { Modal } from '../ui/modal';
 import { Toasts } from '../ui/toast';
 import { Gates } from '../shell/gates';
 import { ExportModal } from '../features/workspace/export-modal';
+import { OrderModal } from '../features/shop/order-modal';
 
 type Chip = 'all' | 'hd' | 'smart' | 'textured' | 'untextured';
 
 /** S06: biblioteca del usuario con búsqueda, filtros, exportar, privacidad y borrar. */
 @Component({
   selector: 'app-my-models',
-  imports: [RouterLink, Icon, Modal, FormsModule, DatePipe, ExportModal],
+  imports: [RouterLink, Icon, Modal, FormsModule, DatePipe, ExportModal, OrderModal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="max-w-content mx-auto px-4 py-8 flex flex-col gap-6">
@@ -89,9 +90,13 @@ type Chip = 'all' | 'hd' | 'smart' | 'textured' | 'untextured';
                   <ui-icon name="ellipsis" /></button>
                 @if (menuFor() === a.id) {
                   <div role="menu" class="absolute right-0 top-9 z-20 w-48 panel shadow-pop p-1 flex flex-col text-sm" (keydown.escape)="menuFor.set(null)">
-                    <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3" (click)="exporting.set(a); menuFor.set(null)"><ui-icon name="download" /> Exportar</button>
-                    <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3" (click)="togglePrivacy(a)">
-                      <ui-icon [name]="a.privacy === 'public' ? 'lock' : 'globe'" /> {{ a.privacy === 'public' ? 'Hacer privado' : 'Hacer público' }}</button>
+                    @if (shop()) {
+                      <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3" (click)="ordering.set(a); menuFor.set(null)"><ui-icon name="box" /> Pedir impresa</button>
+                    } @else {
+                      <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3" (click)="exporting.set(a); menuFor.set(null)"><ui-icon name="download" /> Exportar</button>
+                      <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3" (click)="togglePrivacy(a)">
+                        <ui-icon [name]="a.privacy === 'public' ? 'lock' : 'globe'" /> {{ a.privacy === 'public' ? 'Hacer privado' : 'Hacer público' }}</button>
+                    }
                     <button role="menuitem" type="button" class="flex items-center gap-2 p-2 rounded-md hover:bg-surface-3 text-danger" (click)="deleting.set(a); menuFor.set(null)"><ui-icon name="trash-2" /> Borrar</button>
                   </div>
                 }
@@ -110,6 +115,7 @@ type Chip = 'all' | 'hd' | 'smart' | 'textured' | 'untextured';
       </div>
     </ui-modal>
     <app-export-modal [asset]="exporting()" (closed)="exporting.set(null)" />
+    <app-order-modal [asset]="ordering()" (closed)="ordering.set(null)" />
   `,
 })
 export class MyModels {
@@ -121,6 +127,9 @@ export class MyModels {
   protected readonly menuFor = signal<string | null>(null);
   protected readonly deleting = signal<Asset | null>(null);
   protected readonly exporting = signal<Asset | null>(null);
+  protected readonly ordering = signal<Asset | null>(null);
+  protected readonly shop = signal(true);
+  private readonly caps = this.api.capabilities().then((c) => this.shop.set(c.businessModel === 'shop'));
   protected readonly chips: { id: Chip; label: string }[] = [
     { id: 'all', label: 'Todo' }, { id: 'hd', label: 'Alto detalle' }, { id: 'smart', label: 'Topología limpia' },
     { id: 'textured', label: 'Con textura' }, { id: 'untextured', label: 'Sin textura' },

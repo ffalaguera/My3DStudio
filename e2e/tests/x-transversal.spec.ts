@@ -4,8 +4,7 @@ test.describe('Transversales', () => {
   test('X-3 cuenta: movimientos, cerrar sesión y borrar cuenta', async ({ page }) => {
     await page.goto('/cuenta');
     const email = await signIn(page);
-    // sin créditos de bienvenida (no hay generaciones gratis): la cuenta nueva empieza a 0 movimientos de regalo
-    await expect(page.getByRole('link', { name: /Créditos disponibles/ })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Mis pedidos' })).toBeVisible();
     expect(await a11y(page), 'axe S12').toEqual([]);
     await page.getByRole('button', { name: 'Borrar cuenta' }).click();
     const dialog = page.getByRole('dialog', { name: '¿Borrar tu cuenta?' });

@@ -1,4 +1,4 @@
-import { a11y, chooseImage, credits, expect, setPlan, signIn, sql, test, waitForModel } from './fixtures';
+import { a11y, expect, signIn, sql, test, waitForModel } from './fixtures';
 import type { Page } from '@playwright/test';
 
 async function makeModel(page: Page, prompt: string) {
@@ -8,32 +8,6 @@ async function makeModel(page: Page, prompt: string) {
   await page.getByRole('button', { name: /^Generar/ }).click();
   await waitForModel(page);
 }
-
-test.describe('F04 créditos y planes', () => {
-  test('F04-N1 sin saldo: aviso con la cifra exacta', async ({ page }) => {
-    await page.goto('/crear');
-    await signIn(page, undefined, { credits: 10 }); // pack con 10 créditos: un modelo cuesta 50
-    await chooseImage(page);
-    await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
-    await page.getByRole('button', { name: /^Generar/ }).click();
-    const dialog = page.getByRole('dialog', { name: 'No tienes créditos suficientes' });
-    await expect(dialog).toContainText('Te faltan 40 créditos');
-    await dialog.getByRole('button', { name: 'Ver planes' }).click();
-    await expect(page).toHaveURL(/\/precios/);
-  });
-
-  test('F04-H1 + F04-E1 precios: mensual/anual y pagos sin configurar', async ({ page }) => {
-    await page.goto('/precios');
-    await expect(page.getByRole('heading', { name: 'Precios claros' })).toBeVisible();
-    expect(await a11y(page), 'axe S10').toEqual([]);
-    await expect(page.getByRole('listitem').filter({ hasText: 'Creador' }).getByText('12,5 €')).toBeVisible();
-    await page.getByRole('radio', { name: 'Mensual' }).click();
-    await expect(page.getByRole('listitem').filter({ hasText: 'Creador' }).getByText('15 €')).toBeVisible();
-    await page.getByRole('button', { name: 'Elegir Creador' }).click();
-    await signIn(page); // tras entrar, la elección del plan continúa sola
-    await expect(page.getByRole('status').filter({ hasText: 'Los pagos se activan pronto' })).toBeVisible();
-  });
-});
 
 test.describe('F05 mis modelos', () => {
   test('F05-H1 renombrar desde el visor', async ({ page }) => {
@@ -94,25 +68,6 @@ test.describe('F05 mis modelos', () => {
     await expect(other.getByText(/ya no existe|Entra para ver/)).toBeVisible();
     await page.reload();
     await expect(page.getByRole('alert').filter({ hasText: 'Este modelo ya no existe' })).toBeVisible();
-  });
-
-  test('F05-N1 sin cuota (pago por uso): lo comprado permite modelos privados', async ({ page }) => {
-    await page.goto('/');
-    await signIn(page);
-    await makeModel(page, 'un plato');
-    await page.getByRole('region', { name: 'Resultado' }).getByRole('button', { name: 'Público' }).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Ahora solo tú puedes verlo' })).toBeVisible();
-  });
-
-  test('F04-N2 cuenta nueva: sin créditos gratis; generar lleva a comprar', async ({ page }) => {
-    await page.goto('/crear');
-    await signIn(page, undefined, { credits: 0 });
-    expect(await credits(page)).toBe(0);
-    await page.getByRole('radio', { name: 'Texto' }).click();
-    await page.getByLabel('Describe el objeto').fill('una lámpara');
-    await page.getByRole('button', { name: /^Generar/ }).click();
-    const dialog = page.getByRole('dialog', { name: 'No tienes créditos suficientes' });
-    await expect(dialog).toContainText('Te faltan 50 créditos');
   });
 
   test('F04-N3 cuenta bloqueada por una disputa: no puede generar', async ({ page }) => {

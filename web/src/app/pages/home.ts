@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Icon } from '../ui/icon';
 import { Handoff } from '../features/workspace/handoff';
 import { PaintingViewer, type PaintStep } from '../features/showcase/painting-viewer';
-import { Api, Asset, CreditPack, PlanLimits, Series } from '../data/api';
+import { Api, Asset, Catalog, Series } from '../data/api';
 import { Gates } from '../shell/gates';
-import { lidOf, type Lid } from '../data/lids';
+import { type Lid } from '../data/lids';
 
 /** Modelos de ejemplo reales, generados con My3DStudio (public/showcase/provenance.json). */
 const SHOWCASE = [
@@ -20,20 +20,21 @@ const SHOWCASE = [
 
 
 /**
- * S01 portada: «La guía de pintado». Un modelo real gira sobre su peana y cuatro botes lo repintan:
- * foto, malla gris, textura y archivo. El primer bote es la zona de subida, con el coste en la tapa.
+ * S01 portada de la tienda: «La guía de pintado». Un modelo real gira sobre su peana, en gris como saldrá impreso.
+ * El primer bote es la zona de subida; los demás enseñan la figura, la referencia y las medidas.
  */
 @Component({
   selector: 'app-home',
-  imports: [Icon, RouterLink, PaintingViewer, CurrencyPipe, DecimalPipe],
+  imports: [Icon, RouterLink, PaintingViewer, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Primera vista: el modelo y la guía de cuatro botes, sobre gris imprimación -->
     <section aria-labelledby="hero-title" class="ground-primer -mt-[3.75rem] pt-[3.75rem]">
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 pt-6 sm:pt-10 pb-12 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:content-start gap-x-8 gap-y-6">
         <div class="lg:col-span-5 lg:row-start-1 flex flex-col gap-4 lg:pt-4">
-          <h1 id="hero-title" class="font-display uppercase text-[3.25rem] sm:text-[4.75rem] leading-[0.88]">De una foto a un modelo 3D</h1>
-          <p class="text-sm sm:text-base max-w-[34ch]">Pagas solo lo que generas. El coste va impreso en la tapa, antes de empezar, y la descarga está incluida.</p>
+          <h1 id="hero-title" class="font-display uppercase text-[3.25rem] sm:text-[4.75rem] leading-[0.88]">De una foto a tu figura impresa</h1>
+          <p class="text-sm sm:text-base max-w-[36ch]">Creamos el modelo 3D gratis, lo giras y lo revisas, y te imprimimos la figura en el tamaño y color que elijas.
+            @if (from(); as f) { <span class="figures font-semibold">Desde {{ f / 100 | currency: 'EUR' : 'symbol' : '1.2-2' : 'es' }}, envío aparte.</span> }</p>
         </div>
 
         <!-- El modelo, girando sobre su peana (en móvil, justo bajo el titular) -->
@@ -41,7 +42,7 @@ const SHOWCASE = [
           <app-painting-viewer class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)]"
             [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="viewStep()" />
           <div class="flex flex-col gap-2">
-            <p id="examples-label" class="text-xs font-semibold">Ejemplos reales, hechos con My3DStudio a partir de una frase:</p>
+            <p id="examples-label" class="text-xs font-semibold">Modelos reales, hechos con My3DStudio a partir de una frase:</p>
             <div role="radiogroup" aria-labelledby="examples-label" class="flex sm:flex-wrap gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1">
               @for (e of examples; track e.slug) {
                 <button type="button" role="radio" [attr.aria-checked]="example().slug === e.slug" (click)="example.set(e)"
@@ -78,14 +79,8 @@ const SHOWCASE = [
               <p class="font-display text-[1.5rem] font-extrabold uppercase leading-none">Foto</p>
               <p id="drop-hint" class="text-xs max-w-[28ch]">Arrástrala, pégala o haz clic. JPG, PNG o WEBP, hasta 20 MB.</p>
               @if (error()) { <p id="drop-error" class="text-xs font-semibold text-lid-red bg-bone px-2 py-1 self-start" role="alert">{{ error() }}</p> }
-              <div role="radiogroup" aria-label="Tipo de modelo" class="inline-flex p-1 rounded-pill bg-ink/90 self-start">
-                <button type="button" role="radio" [attr.aria-checked]="series() === 'hd'" (click)="series.set('hd')"
-                  class="h-8 px-3 rounded-pill text-xs font-semibold text-bone aria-checked:bg-bone aria-checked:text-ink">Alto detalle</button>
-                <button type="button" role="radio" [attr.aria-checked]="series() === 'smart'" (click)="series.set('smart')"
-                  class="h-8 px-3 rounded-pill text-xs font-semibold text-bone aria-checked:bg-bone aria-checked:text-ink">Topología limpia</button>
-              </div>
               <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <button type="button" class="btn btn-primary btn-lg figures" (click)="go()">Generar · {{ cost }} créditos</button>
+                <button type="button" class="btn btn-primary btn-lg" (click)="go()">Crear mi figura · gratis</button>
                 <a routerLink="/crear" [queryParams]="{ serie: series() }" class="text-sm font-semibold underline">o descríbelo con palabras</a>
               </div>
             </div>
@@ -131,7 +126,7 @@ const SHOWCASE = [
     <section aria-labelledby="guia" class="ground-bone">
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 py-16 sm:py-24 grid lg:grid-cols-12 gap-8">
         <div class="lg:col-span-4">
-          <h2 id="guia" class="text-[3rem] sm:text-[3.75rem] uppercase leading-[0.9] lg:sticky lg:top-24">Cómo se pinta un modelo</h2>
+          <h2 id="guia" class="text-[3rem] sm:text-[3.75rem] uppercase leading-[0.9] lg:sticky lg:top-24">De tu foto a tu estantería</h2>
         </div>
         <ol class="lg:col-span-8 flex flex-col">
           @for (s of guide; track s.title; let i = $index) {
@@ -154,13 +149,13 @@ const SHOWCASE = [
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 py-16 sm:py-24 grid lg:grid-cols-12 gap-8">
         <div class="lg:col-span-5 flex flex-col gap-4">
           <h2 id="promesas" class="text-[3rem] sm:text-[3.75rem] uppercase leading-[0.9]">Sin letra pequeña en la etiqueta</h2>
-          <p class="text-sm text-bone/85 max-w-[40ch]">En muchas herramientas descubres al final que descargar se paga aparte, que los créditos se
-            esfuman a fin de mes o que cancelar es una carrera de obstáculos. Aquí no.</p>
+          <p class="text-sm text-bone/85 max-w-[40ch]">No necesitas impresora, ni saber de 3D, ni suscribirte a nada. Creas el modelo,
+            lo miras por todos lados y solo pagas si quieres la figura.</p>
         </div>
         <div class="lg:col-span-7 ground-bone px-5 sm:px-8 py-4 shadow-[0_12px_32px_rgb(0_0_0/0.35)]">
           <div class="flex items-baseline justify-between border-b-2 keyline pb-2 mb-1">
             <span class="font-display text-[1.5rem] font-extrabold uppercase leading-none">Contenido del bote</span>
-            <span class="text-xs figures">6 garantías</span>
+            <span class="text-xs figures">{{ promises.length }} garantías</span>
           </div>
           <dl>
           @for (f of promises; track f.title) {
@@ -179,24 +174,27 @@ const SHOWCASE = [
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 py-16 sm:py-24 flex flex-col gap-10">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <h2 id="precio" class="text-[3rem] sm:text-[3.75rem] uppercase leading-[0.9] max-w-[16ch]">El precio, en la tapa</h2>
-          <p class="text-sm max-w-[44ch]">Un modelo cuesta {{ cost }} créditos y lo ves antes de generar. Sin generaciones gratis: todo lo pagas
-            antes, nunca después. Si una generación falla, te devolvemos los créditos.</p>
+          <p class="text-sm max-w-[44ch]">Crear y revisar el modelo es gratis. Pagas la figura, con IVA, y el envío a casa
+            @if (cat(); as c) { (<span class="figures">{{ c.shippingCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' : 'es' }}</span>) }.
+            Nada de suscripciones ni créditos.</p>
         </div>
-        <ul class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
-          @for (o of offers(); track o.title) {
-            <li class="flex flex-col items-center text-center gap-3">
-              <span class="pot-lid w-32 h-32 sm:w-36 sm:h-36 rounded-full grid place-items-center" [attr.data-lid]="o.lid">
-                <span class="flex flex-col items-center leading-none figures">
-                  <span class="font-display text-[3rem] font-extrabold">{{ o.price | currency: 'EUR' : 'symbol' : '1.0-2' : 'es' }}</span>
-                  <span class="text-xs font-semibold pt-1">{{ o.per }}</span>
+        @if (cat(); as c) {
+          <ul class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-10">
+            @for (z of c.sizes; track z.id; let i = $index) {
+              <li class="flex flex-col items-center text-center gap-3">
+                <span class="pot-lid w-32 h-32 sm:w-36 sm:h-36 rounded-full grid place-items-center" [attr.data-lid]="lids[i % lids.length]">
+                  <span class="flex flex-col items-center leading-none figures">
+                    <span class="font-display text-[2.25rem] font-extrabold">{{ z.priceCents / 100 | currency: 'EUR' : 'symbol' : '1.2-2' : 'es' }}</span>
+                    <span class="text-xs font-semibold pt-1">{{ z.heightMm / 10 }} cm</span>
+                  </span>
                 </span>
-              </span>
-              <span class="font-display text-[1.5rem] font-extrabold uppercase leading-none">{{ o.title }}</span>
-              <span class="text-sm figures">≈ {{ o.models | number: '1.0-0' : 'es' }} modelos{{ o.note }}</span>
-            </li>
-          }
-        </ul>
-        <a routerLink="/precios" class="btn btn-lg bg-ink text-bone hover:bg-ink-soft self-start">Ver todos los precios <ui-icon name="arrow-right" /></a>
+                <span class="font-display text-[1.5rem] font-extrabold uppercase leading-none">{{ z.name }}</span>
+                <span class="text-sm figures">{{ z.heightMm }} mm de alto · {{ c.colors.length }} colores</span>
+              </li>
+            }
+          </ul>
+        }
+        <a routerLink="/crear" class="btn btn-lg bg-ink text-bone hover:bg-ink-soft self-start">Crear mi figura <ui-icon name="arrow-right" /></a>
       </div>
     </section>
 
@@ -226,10 +224,10 @@ const SHOWCASE = [
           </span>
           <div>
             <h2 id="cierre" class="text-[3rem] sm:text-[3.75rem] uppercase leading-[0.9]">Empieza por la foto</h2>
-            <p class="text-sm text-bone/85 pt-2">Crear la cuenta es gratis. El pack de prueba son 3 modelos por 3 €, y no caduca.</p>
+            <p class="text-sm text-bone/85 pt-2">Crear el modelo es gratis. Solo pagas la figura, si te convence.</p>
           </div>
         </div>
-        <a routerLink="/crear" class="btn btn-primary btn-lg self-start sm:self-auto">Crear mi primer modelo <ui-icon name="arrow-right" /></a>
+        <a routerLink="/crear" class="btn btn-primary btn-lg self-start sm:self-auto">Crear mi figura <ui-icon name="arrow-right" /></a>
       </div>
     </section>
   `,
@@ -244,72 +242,58 @@ export class Home {
   protected readonly error = signal('');
   protected readonly dragging = signal(false);
   protected readonly hoverFoto = signal(false);
-  protected readonly step = signal<PaintStep>('textura');
+  // la figura se imprime de un color: el modelo se enseña en gris imprimación, como saldrá
+  protected readonly step = signal<PaintStep>('malla');
   /** Al pasar por el bote 1, el modelo enseña de dónde salió. */
   protected readonly viewStep = computed<PaintStep>(() => (this.hoverFoto() ? 'foto' : this.step()));
   protected readonly examples = SHOWCASE;
   protected readonly example = signal<(typeof SHOWCASE)[number]>(SHOWCASE[0]);
-  /** Créditos de un modelo (CREDITS_HD del servidor; la topología limpia cuesta lo mismo por variante). */
-  protected readonly cost = 50;
   private file: File | null = null;
   private readonly assets = toSignal(this.api.assets(), { initialValue: [] as Asset[] });
   protected recent = () => this.assets().slice(0, 6);
 
   protected readonly pots: { step: PaintStep; n: number; label: string; lid: Lid }[] = [
-    { step: 'malla', n: 2, label: 'Malla gris', lid: 'mustard' },
-    { step: 'textura', n: 3, label: 'Textura', lid: 'blue' },
-    { step: 'archivo', n: 4, label: 'Archivo', lid: 'green' },
+    { step: 'malla', n: 2, label: 'Figura', lid: 'mustard' },
+    { step: 'textura', n: 3, label: 'Referencia', lid: 'blue' },
+    { step: 'archivo', n: 4, label: 'Medidas', lid: 'green' },
   ];
   protected readonly guide: { title: string; text: string; gets: string; lid: Lid }[] = [
-    { title: 'Foto', lid: 'red', gets: 'Coste visible: 50 créditos por modelo',
-      text: 'Sube una foto con el objeto centrado y el fondo limpio, o descríbelo con una frase. Antes de pulsar Generar ves exactamente cuántos créditos gasta.' },
-    { title: 'Malla gris', lid: 'mustard', gets: 'Alto detalle o topología limpia, de 500 a 25.000 polígonos',
-      text: 'La forma sale en gris, como una figura recién imprimada. Elige alto detalle para imprimir o topología limpia si vas a animarla o editarla.' },
-    { title: 'Textura', lid: 'blue', gets: 'Texturas 2K o 4K, con materiales PBR',
-      text: 'El color se pinta sobre la malla. Gira el modelo en el visor y míralo por todos lados antes de descargarlo.' },
-    { title: 'Archivo', lid: 'green', gets: 'GLB, OBJ, STL, 3MF, FBX y USDZ',
-      text: 'Descárgalo para tu laminador, tu motor de juego, tu web o realidad aumentada. La descarga va incluida, sin pagar aparte.' },
+    { title: 'Foto o frase', lid: 'red', gets: 'Gratis, sin tarjeta',
+      text: 'Sube una foto con el objeto centrado y el fondo limpio, o descríbelo con una frase. Si lo describes, primero ves la imagen de la que saldrá.' },
+    { title: 'Modelo 3D', lid: 'mustard', gets: 'Listo en unos minutos',
+      text: 'Creamos el modelo en 3D. Gíralo en el visor y míralo por todos lados. Si no te convence, crea otro.' },
+    { title: 'Tamaño y color', lid: 'blue', gets: 'Tres tamaños, varios colores y peana opcional',
+      text: 'Elige la altura, el color del material y si la quieres con peana. Ves el precio total, con envío, antes de pagar.' },
+    { title: 'A tu casa', lid: 'green', gets: 'Seguimiento del pedido en tu cuenta',
+      text: 'La imprimimos en nuestro taller y te la enviamos. En Mis pedidos ves si está en cola, imprimiéndose o enviada.' },
   ];
   protected readonly promises = [
-    { icon: 'zap', title: 'Ves antes de pagar', text: 'Si lo describes con texto, primero ves la imagen de la que saldrá el modelo, sin gastar créditos. Y el coste se muestra antes de empezar.' },
-    { icon: 'download', title: 'Descarga incluida', text: 'Lo que generas se descarga en todos los formatos, sin pagar por exportar.' },
-    { icon: 'history', title: 'Créditos que duran', text: 'Lo que no gastes un mes pasa al siguiente, y los packs no caducan nunca.' },
-    { icon: 'rotate-ccw', title: 'Si falla, se devuelve', text: 'Una generación fallida o cancelada no cuesta nada: los créditos vuelven solos.' },
-    { icon: 'x', title: 'Te vas cuando quieras', text: 'Cancelas desde tu cuenta, sin encuestas ni descuentos para retenerte.' },
-    { icon: 'box', title: 'Listo para imprimir', text: 'Eliges la altura en milímetros y, si quieres, una peana. El STL o 3MF sale de pie, a tamaño real y con aviso si la malla tiene agujeros.' },
+    { title: 'Gratis hasta que la pides', text: 'Crear y revisar el modelo no cuesta nada. Solo pagas la figura que quieras recibir.' },
+    { title: 'Ves antes de pagar', text: 'Con una frase, primero ves la imagen de la que saldrá el modelo. Y el modelo lo giras en 3D antes de pedirlo.' },
+    { title: 'Precio cerrado', text: 'Tamaño, color, peana y envío: el total aparece antes de pagar, con IVA. Sin suscripciones ni créditos.' },
+    { title: 'Sin impresora', text: 'No necesitas saber de 3D ni tener impresora. Nosotros preparamos el archivo y la imprimimos.' },
+    { title: 'Tus modelos, privados', text: 'Lo que creas solo lo ves tú. No se publica en ninguna galería.' },
+    { title: 'Sabes dónde está', text: 'Cada pedido muestra su estado y, cuando sale, el número de seguimiento del envío.' },
   ];
   protected readonly faq = [
-    { q: '¿Qué es un crédito?', a: 'La unidad con la que pagas cada generación. Un modelo de alto detalle cuesta 50 créditos; el botón Generar siempre te dice el coste exacto.' },
-    { q: '¿Hay plan gratis?', a: 'Crear la cuenta y mirar es gratis, pero cada modelo usa GPU de pago, así que no regalamos generaciones. Para probar, el pack de 3 € trae 3 modelos que no caducan.' },
-    { q: '¿Qué pasa con los créditos que no gasto?', a: 'Los del mes pasan al mes siguiente (como mucho, lo de un mes). Los de los packs no caducan nunca.' },
-    { q: '¿Y si el modelo sale mal o falla?', a: 'Si falla o la cancelas, se devuelven los créditos. Con texto puedes ver antes la imagen de la que saldrá, gratis, y pedir otra hasta que te convenza. Si el modelo sale pero no te gusta, reintentar cuesta lo mismo que generar, porque cada intento usa GPU de pago.' },
-    { q: '¿Cómo cancelo?', a: 'En Tu cuenta → Gestionar o cancelar suscripción. Sin preguntas. Sigues con tu plan hasta el final del periodo pagado.' },
-    { q: '¿Quién es dueño de los modelos?', a: 'Tú. Puedes usarlos comercialmente y mantenerlos privados, compres un pack o una suscripción.' },
+    { q: '¿Cuánto cuesta?', a: 'Crear el modelo es gratis. La figura cuesta según el tamaño (lo ves en la tapa) más el envío. El total sale antes de pagar.' },
+    { q: '¿De qué material es?', a: 'De plástico de impresión 3D, en un solo color que eliges tú. No va pintada: si quieres pintarla, el gris imprimación es el más cómodo.' },
+    { q: '¿Cuántos modelos puedo crear gratis?', a: 'Unos cuantos al día por persona. Cada modelo usa GPU de pago, así que hay un tope diario; al día siguiente puedes crear más.' },
+    { q: '¿Cuánto tarda en llegar?', a: 'Normalmente entre 5 y 8 días laborables desde el pago: la imprimimos, la revisamos y la enviamos. Por ahora solo enviamos a España.' },
+    { q: '¿Puedo descargar el archivo 3D?', a: 'No: vendemos la figura impresa, no el archivo. Así no tienes que preocuparte de laminadores ni de mallas.' },
+    { q: '¿Y si el modelo no sale bien?', a: 'Antes de pagar lo ves en 3D desde todos los lados. Si no te convence, crea otro; solo pides la figura cuando te guste.' },
   ];
-
-  private readonly plans = signal<PlanLimits[]>([]);
-  private readonly packs = signal<CreditPack[]>([]);
-  /** Botes de precio, con los datos reales de la API (packs y planes de pago). */
-  protected readonly offers = computed(() => {
-    const out: { title: string; price: number; per: string; models: number; note: string; lid: Lid }[] = [];
-    const k = this.packs();
-    const trial = k.find((p) => p.id === 'pack_150') ?? k[0];
-    const small = k.find((p) => p.id === 'pack_800');
-    if (trial) out.push({ title: 'Pack de prueba', price: trial.priceCents / 100, per: 'una vez', models: (trial.credits + trial.bonusCredits) / this.cost, note: ', no caducan', lid: lidOf(trial.id) });
-    if (small) out.push({ title: 'Pack', price: small.priceCents / 100, per: 'una vez', models: (small.credits + small.bonusCredits) / this.cost, note: ', no caducan', lid: lidOf(small.id) });
-    for (const p of this.plans().filter((x) => x.priceMonthCents > 0).slice(0, 2)) {
-      out.push({ title: p.name, price: p.priceMonthCents / 100, per: 'al mes', models: p.monthlyCredits / this.cost, note: ' al mes', lid: lidOf(p.id) });
-    }
-    return out;
-  });
+  /** Una tapa por tamaño, en el orden de las tapas de la guía. */
+  protected readonly lids: Lid[] = ['red', 'mustard', 'blue'];
+  protected readonly cat = signal<Catalog | null>(null);
+  protected readonly from = computed(() => this.cat()?.sizes.reduce((m, z) => Math.min(m, z.priceCents), Infinity) ?? null);
 
   constructor() {
-    void this.api.plans().then((p) => this.plans.set(p)).catch(() => {});
-    void this.api.creditPacks().then((k) => this.packs.set(k)).catch(() => {});
+    void this.api.catalog().then((c) => this.cat.set(c)).catch(() => {});
   }
 
   protected choose(s: PaintStep): void {
-    this.step.set(this.step() === s ? 'textura' : s);
+    this.step.set(this.step() === s ? 'malla' : s);
   }
 
   protected over(e: DragEvent): void {

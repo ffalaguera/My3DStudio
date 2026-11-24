@@ -118,6 +118,8 @@ async function userForPayment(c: Tx, pi: string | { id: string } | null | undefi
   if (piId) {
     const p = await c.query('select user_id from payments where payment_intent = $1', [piId]);
     if (p.rowCount) return p.rows[0].user_id;
+    const o = await c.query('select user_id from print_orders where payment_intent = $1 and user_id is not null', [piId]);
+    if (o.rowCount) return o.rows[0].user_id;
   }
   return typeof charge === 'object' && charge?.customer ? userForCustomer(c, charge.customer) : null;
 }
@@ -134,6 +136,28 @@ async function blockAndRevoke(c: Tx, userId: string, reason: string): Promise<vo
     }
   }
   await c.query('update credit_accounts set monthly_balance = 0, permanent_balance = 0 where user_id = $1', [userId]);
+}
+
+/** Pedido de figura pagado: se comprueba el importe y se guardan la dirección y el pago. */
+async function payOrder(ctx: Ctx, c: Tx, s: Stripe.Checkout.Session): Promise<'processed' | 'ignored'> {
+  const id = s.metadata!['order_id']!;
+  const o = (await c.query('select status, total_cents, currency, user_id from print_orders where id = $1 for update', [id])).rows[0];
+  if (!o) return 'ignored';
+  if (s.amount_total !== o.total_cents || s.currency !== o.currency) {
+    ctx.security.record({ kind: 'payment_mismatch', userId: o.user_id ?? undefined,
+      detail: `pedido ${id.slice(0, 8)}: cobrado ${s.amount_total} ${s.currency}, precio ${o.total_cents} ${o.currency}` });
+    return 'ignored';
+  }
+  if (o.status !== 'pending_payment') return 'ignored';
+  const ship = (s as unknown as { collected_information?: { shipping_details?: unknown } }).collected_information?.shipping_details
+    ?? (s as unknown as { shipping_details?: unknown }).shipping_details ?? null;
+  const pi = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id ?? null;
+  await c.query(
+    `update print_orders set status = 'paid', paid_at = now(), updated_at = now(), shipping = $2, payment_intent = $3,
+            email = coalesce($4, email), stripe_session_id = coalesce(stripe_session_id, $5)
+      where id = $1`,
+    [id, ship ? JSON.stringify({ ...(ship as object), phone: s.customer_details?.phone ?? null }) : null, pi, s.customer_details?.email ?? null, s.id]);
+  return 'processed';
 }
 
 /** Aplica un evento ya verificado. Idempotente: el id del evento se guarda en la misma transacción. */
@@ -190,9 +214,10 @@ export async function handleStripeEvent(ctx: Ctx, event: Stripe.Event): Promise<
         return 'processed';
       }
       case 'checkout.session.completed': {
-        // Solo packs (pago único). Las suscripciones se gestionan con customer.subscription.* e invoice.paid.
+        // Packs y pedidos de figuras (pago único). Las suscripciones se gestionan con customer.subscription.* e invoice.paid.
         const s = event.data.object as Stripe.Checkout.Session;
         if (s.mode !== 'payment' || s.payment_status !== 'paid') return 'ignored';
+        if (s.metadata?.['order_id']) return payOrder(ctx, c, s);
         const userId = s.metadata?.['user_id'] ?? s.client_reference_id;
         const packId = s.metadata?.['pack_id'];
         if (!userId || !packId) return 'ignored';
@@ -222,6 +247,9 @@ export async function handleStripeEvent(ctx: Ctx, event: Stripe.Event): Promise<
         const o = event.data.object as { payment_intent?: string | { id: string } | null; charge?: string | { id: string; customer?: string | null } };
         const userId = await userForPayment(c, o.payment_intent, o.charge);
         if (!userId) return 'ignored';
+        const piId = typeof o.payment_intent === 'string' ? o.payment_intent : o.payment_intent?.id;
+        // un pedido en disputa no se imprime ni se envía
+        if (piId) await c.query(`update print_orders set note = concat_ws(' · ', note, 'DISPUTA: no enviar'), updated_at = now() where payment_intent = $1`, [piId]);
         await blockAndRevoke(c, userId, event.type === 'charge.dispute.created' ? 'Disputa de un pago' : 'Aviso de fraude del banco');
         ctx.security.record({ kind: 'payment_dispute', userId, detail: event.type });
         return 'processed';
@@ -230,6 +258,14 @@ export async function handleStripeEvent(ctx: Ctx, event: Stripe.Event): Promise<
         // Reembolso (lo haces tú desde Stripe): se retiran los créditos de esa compra que queden sin gastar.
         const ch = event.data.object as Stripe.Charge;
         const pi = typeof ch.payment_intent === 'string' ? ch.payment_intent : ch.payment_intent?.id;
+        // reembolso de un pedido de figura: se marca el pedido; no hay créditos que retirar
+        if (pi) {
+          const ord = await c.query(`update print_orders set status = 'refunded', updated_at = now() where payment_intent = $1 returning user_id`, [pi]);
+          if (ord.rowCount) {
+            ctx.security.record({ kind: 'payment_refund', userId: ord.rows[0].user_id ?? undefined, detail: 'pedido reembolsado' });
+            return 'processed';
+          }
+        }
         const pay = pi ? (await c.query('select user_id, kind, credits from payments where payment_intent = $1', [pi])).rows[0] : null;
         const userId = pay?.user_id ?? (await userForCustomer(c, ch.customer));
         if (!userId) return 'ignored';

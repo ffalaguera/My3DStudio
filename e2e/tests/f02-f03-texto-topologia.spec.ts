@@ -1,4 +1,4 @@
-import { a11y, credits, expect, setPlan, signIn, test, waitForModel } from './fixtures';
+import { expect, signIn, test, waitForModel } from './fixtures';
 
 test.describe('F02 texto → modelo 3D', () => {
   test('F02-H1 + X-2 solo con teclado: Texto, escribir, Ctrl+Enter', async ({ page }) => {
@@ -15,13 +15,12 @@ test.describe('F02 texto → modelo 3D', () => {
     await expect(page.getByRole('region', { name: 'Resultado' }).getByRole('heading', { name: 'una tetera de cerámica' })).toBeVisible();
   });
 
-  test('F02-E1 prompt vacío: aviso y no se cobra', async ({ page }) => {
+  test('F02-E1 prompt vacío: aviso', async ({ page }) => {
     await page.goto('/crear');
     await signIn(page);
     await page.getByRole('radio', { name: 'Texto' }).click();
     await page.getByRole('button', { name: /^Generar/ }).click();
     await expect(page.getByRole('alert').filter({ hasText: 'Describe el objeto que quieres crear' })).toBeVisible();
-    expect(await credits(page)).toBe(100);
   });
 
   test('F02-E2 texto muy largo: se corta en 1.024', async ({ page }) => {
@@ -46,42 +45,9 @@ test.describe('F02 texto → modelo 3D', () => {
 });
 
 test.describe('F03 topología limpia', () => {
-  test('F03-N1 pago por uso: más de una variante es de los planes; aviso de plan', async ({ page }) => {
-    await page.goto('/crear');
-    await signIn(page);
-    await page.getByRole('radio', { name: 'Topología limpia' }).click(); // incluida en pago por uso
-    await page.getByRole('button', { name: 'Topología' }).click();
-    await page.getByRole('radiogroup', { name: 'Variantes' }).getByRole('radio', { name: '2' }).click();
-    await page.getByRole('button', { name: /^Generar/ }).click();
-    const dialog = page.getByRole('dialog', { name: 'Esto no está en tu plan' });
-    await expect(dialog).toContainText('Tu plan permite 1 variante por generación');
-    expect(await a11y(page, 'dialog[open]'), 'axe S13').toEqual([]);
-  });
-
-  test('F03-H1 Pro: 5.000 polígonos y 2 variantes', async ({ page }) => {
-    await page.goto('/crear');
-    const email = await signIn(page);
-    await setPlan(email, 'pro', 3000);
-    await page.reload();
-    await page.getByRole('radio', { name: 'Topología limpia' }).click();
-    await page.getByRole('radio', { name: 'Texto' }).click();
-    await page.getByLabel('Describe el objeto').fill('un cofre de pirata');
-    await page.getByRole('button', { name: 'Topología' }).click();
-    await page.getByRole('spinbutton', { name: 'Número de polígonos' }).fill('5000');
-    await page.getByRole('radiogroup', { name: 'Variantes' }).getByRole('radio', { name: '2' }).click();
-    await expect(page.getByRole('button', { name: /^Generar.*100/ })).toBeVisible();
-    await page.getByRole('button', { name: /^Generar/ }).click();
-    await waitForModel(page);
-    const variants = page.getByRole('region', { name: 'Resultado' }).getByRole('radiogroup', { name: 'Variantes' });
-    await expect(variants.getByRole('radio')).toHaveCount(2);
-    expect(await credits(page)).toBe(3000); // 3000 del mes - 2 variantes × 50 + 100 del pack con el que entra
-  });
-
   test('F03-E1 polígonos fuera de rango', async ({ page }) => {
     await page.goto('/crear');
-    const email = await signIn(page);
-    await setPlan(email, 'pro', 3000);
-    await page.reload();
+    await signIn(page);
     await page.getByRole('radio', { name: 'Topología limpia' }).click();
     await page.getByRole('button', { name: 'Topología' }).click();
     await page.getByRole('spinbutton', { name: 'Número de polígonos' }).fill('30000');

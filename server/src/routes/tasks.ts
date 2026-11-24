@@ -15,7 +15,8 @@ import { createProvider } from '../jobs/worker.js';
 const idemKey = z.string().min(8).max(100);
 
 /** Crea la tarea, sus entradas y congela los créditos, todo en una transacción. */
-async function createTask(c: Tx, userId: string, req: TaskRequest, key: string, opts: { retryOf?: string; free?: boolean } = {}) {
+async function createTask(c: Tx, userId: string, req: TaskRequest, key: string,
+  opts: { retryOf?: string; free?: boolean; shop?: { perDay: number } } = {}) {
   // idempotencia: el mismo envío devuelve la misma tarea (doble clic, reintento de red)
   const dup = await c.query('select id from tasks where user_id = $1 and idempotency_key = $2', [userId, key]);
   if (dup.rowCount) return dup.rows[0].id as string;
@@ -30,15 +31,31 @@ async function createTask(c: Tx, userId: string, req: TaskRequest, key: string, 
   if (blocked.rows[0]?.blocked_at) {
     throw new HttpError(403, 'account_blocked', 'Tu cuenta está bloqueada por una incidencia con un pago. Escríbenos para resolverlo');
   }
-  const est = await evaluate(c, userId, req, { free: opts.free });
-  if (!est.allowed) throw new HttpError(est.reason === 'insufficient_credits' ? 402 : 403, est.reason!, est.detail!);
+  let est: { credits: number };
+  if (opts.shop) {
+    // tienda: generar es gratis, con tope diario por persona (el gasto real lo paga la venta de la figura)
+    if (opts.shop.perDay > 0) {
+      const today = Number((await c.query(
+        `select count(*) from tasks where user_id = $1 and status <> 'cancelled' and created_at >= date_trunc('day', now())`, [userId])).rows[0].count);
+      if (today >= opts.shop.perDay) {
+        throw new HttpError(429, 'generation_limit', `Ya has creado ${opts.shop.perDay} modelos hoy. Mañana puedes crear más`);
+      }
+    }
+    // los modelos de la tienda son privados y de una sola variante; la textura no importa (la figura es de un color)
+    req = { ...req, privacy: 'private', params: { ...req.params, variants: 1, textureResolution: '2k' } };
+    est = { credits: 0 };
+  } else {
+    const e = await evaluate(c, userId, req, { free: opts.free });
+    if (!e.allowed) throw new HttpError(e.reason === 'insufficient_credits' ? 402 : 403, e.reason!, e.detail!);
+    est = e;
+  }
   const params = { ...req.params, variants: req.series === 'smart' ? req.params.variants : 1 };
   const ins = await c.query(
     `insert into tasks (user_id, type, series, prompt, texture_prompt, params, privacy, idempotency_key, provider,
                         credits_cost, retry_of_task_id, is_free_retry)
      values ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11) returning id`,
     [userId, req.type, req.series, req.prompt ?? null, req.texturePrompt ?? null, params, req.privacy, key,
-      est.credits, opts.retryOf ?? null, !!opts.free],
+      est.credits, opts.retryOf ?? null, !!opts.free && !opts.shop],
   );
   const id = ins.rows[0].id as string;
   if (req.uploadId) await c.query(`insert into task_inputs (task_id, upload_id, view) values ($1,$2,'single')`, [id, req.uploadId]);
@@ -50,9 +67,11 @@ async function createTask(c: Tx, userId: string, req: TaskRequest, key: string, 
 export function taskRoutes(ctx: Ctx) {
   const r = Router();
   const { db, storage } = ctx;
+  const shop = ctx.cfg.BUSINESS_MODEL === 'shop' ? { perDay: ctx.cfg.GENERATION_FREE_PER_DAY } : undefined;
 
   r.post('/estimate', async (req, res) => {
     const body = estimateSchema.parse(req.body) as TaskRequest;
+    if (shop) return res.json({ credits: 0, etaSeconds: body.series === 'hd' ? 180 : 30, allowed: true });
     const { plan, ...est } = await evaluate(db, req.user!.id, body);
     void plan;
     res.json(est);
@@ -61,7 +80,7 @@ export function taskRoutes(ctx: Ctx) {
   r.post('/', async (req, res) => {
     const key = idemKey.parse(req.header('Idempotency-Key'));
     const body = taskRequestSchema.parse(req.body);
-    const id = await tx(db, (c) => createTask(c, req.user!.id, body, key));
+    const id = await tx(db, (c) => createTask(c, req.user!.id, body, key, { shop }));
     const [task] = await ser.tasks(db, storage, 't.id = $1 and t.user_id = $2', [id, req.user!.id]);
     res.status(201).json({ task });
   });
@@ -81,7 +100,7 @@ export function taskRoutes(ctx: Ctx) {
       if (blocked.rows[0]?.blocked_at) {
         throw new HttpError(403, 'account_blocked', 'Tu cuenta está bloqueada por una incidencia con un pago. Escríbenos para resolverlo');
       }
-      const need = costOf('hd', { texture: true, textureResolution: '2k', variants: 1 });
+      const need = shop ? 0 : costOf('hd', { texture: true, textureResolution: '2k', variants: 1 });
       const acc = (await c.query('select monthly_balance + permanent_balance as available from credit_accounts where user_id = $1', [userId])).rows[0];
       const available = Number(acc?.available ?? 0);
       if (available < need) {
@@ -164,7 +183,7 @@ export function taskRoutes(ctx: Ctx) {
         type: o.type, series: o.series, prompt: o.prompt ?? undefined, texturePrompt: o.texture_prompt ?? undefined,
         uploadId: o.upload_id ?? undefined, params: o.params, privacy: o.privacy,
       });
-      return createTask(c, userId, body, key, { retryOf: id, free: false });
+      return createTask(c, userId, body, key, { retryOf: id, free: false, shop });
     });
     const [task] = await ser.tasks(db, storage, 't.id = $1', [newId]);
     res.status(201).json({ task });

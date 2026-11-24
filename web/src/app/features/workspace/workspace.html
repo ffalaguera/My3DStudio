@@ -95,7 +95,8 @@
                     [class.left-0.5]="!params().texture" [class.bg-text-muted]="!params().texture"></span>
                 </button>
               </label>
-              @if (params().texture) {
+              <!-- tienda: la figura es de un color; la resolución de textura no cambia nada -->
+              @if (params().texture && !shop()) {
                 <div role="radiogroup" aria-label="Resolución de textura" class="flex gap-2">
                   @for (r of ['2k', '4k', '8k']; track r) {
                     <button type="button" role="radio" class="chip flex-1 justify-center" [attr.aria-checked]="params().textureResolution === r"
@@ -130,6 +131,7 @@
                 </span>
               </label>
               @if (faceLimitError()) { <p class="error-text -mt-2" role="alert">{{ faceLimitError() }}</p> }
+              @if (!shop()) {
               <div class="label">Variantes
                 <div role="radiogroup" aria-label="Variantes" class="flex gap-2">
                   @for (v of [1, 2, 4]; track v) {
@@ -138,11 +140,13 @@
                   }
                 </div>
               </div>
+              }
             }
           </div>
         }
       </div>
 
+      @if (!shop()) {
       <div class="flex items-center justify-between text-sm">
         <span id="privacy-label">Visibilidad</span>
         <div role="radiogroup" aria-labelledby="privacy-label" class="seg">
@@ -153,18 +157,22 @@
         </div>
       </div>
       @if (privacy() === 'public') { <p class="hint -mt-2">Cualquiera con el enlace podrá verlo.</p> }
+      }
     </div>
 
     <div class="p-4 border-t border-border sticky bottom-0 bg-surface-2 rounded-b-lg">
       @let est = estimate();
-      @if (est && !est.allowed && est.reason !== 'not_signed_in') {
+      @if (shop()) {
+        @if (freeLeft(); as left) { <p class="hint mb-2 figures">Crear el modelo es gratis · te quedan {{ left.left }} de {{ left.perDay }} hoy.</p> }
+        @else { <p class="hint mb-2">Crear el modelo es gratis. Solo pagas la figura si la pides.</p> }
+      } @else if (est && !est.allowed && est.reason !== 'not_signed_in') {
         <p class="text-xs text-warning mb-2 flex items-start gap-1"><ui-icon name="info" [size]="14" /> {{ est.detail }}</p>
       }
       <button type="button" class="btn btn-primary btn-lg w-full" (click)="generate()" [disabled]="submitting()" [attr.aria-busy]="submitting()">
         @if (submitting()) { <ui-icon name="loader-circle" class="animate-spin" /> Enviando… }
         @else {
           {{ mode() === 'text_to_model' && textPreview() ? 'Generar 3D de esta imagen' : 'Generar' }}
-          @if (est) { <span class="flex items-center gap-1 text-sm font-normal"><ui-icon name="zap" [size]="14" />{{ est.credits }}<span class="sr-only">créditos</span></span> }
+          @if (est && !shop()) { <span class="flex items-center gap-1 text-sm font-normal"><ui-icon name="zap" [size]="14" />{{ est.credits }}<span class="sr-only">créditos</span></span> }
         }
       </button>
     </div>
@@ -199,10 +207,14 @@
         </div>
       }
       <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 p-1 rounded-pill bg-surface-2/90 backdrop-blur shadow-float">
-        <button type="button" class="btn btn-sm btn-ghost" (click)="togglePrivacy(a)">
-          <ui-icon [name]="a.privacy === 'public' ? 'globe' : 'lock'" /> {{ a.privacy === 'public' ? 'Público' : 'Privado' }}
-        </button>
-        <button type="button" class="btn btn-sm btn-primary" (click)="exporting.set(a)"><ui-icon name="download" /> Exportar</button>
+        @if (shop()) {
+          <button type="button" class="btn btn-sm btn-primary" (click)="ordering.set(a)"><ui-icon name="box" /> Pedir impresa</button>
+        } @else {
+          <button type="button" class="btn btn-sm btn-ghost" (click)="togglePrivacy(a)">
+            <ui-icon [name]="a.privacy === 'public' ? 'globe' : 'lock'" /> {{ a.privacy === 'public' ? 'Público' : 'Privado' }}
+          </button>
+          <button type="button" class="btn btn-sm btn-primary" (click)="exporting.set(a)"><ui-icon name="download" /> Exportar</button>
+        }
       </div>
     } @else if (assetError()) {
       <div class="viewport-bg flex-1 grid place-items-center text-center p-6" role="alert">
@@ -228,11 +240,11 @@
           <div class="flex flex-col items-center gap-3 max-w-sm" role="alert">
             <ui-icon name="circle-alert" [size]="28" class="text-danger" />
             <p>{{ t.errorMessage }}</p>
-            <p class="text-sm text-text-muted">Te hemos devuelto los {{ t.creditsCost }} créditos. Prueba con una imagen de fondo liso y el objeto centrado.</p>
+            <p class="text-sm text-text-muted">@if (t.creditsCost) { Te hemos devuelto los {{ t.creditsCost }} créditos. } Prueba con una imagen de fondo liso y el objeto centrado.</p>
             <button type="button" class="btn btn-secondary" (click)="retry(t)"><ui-icon name="rotate-ccw" /> Reintentar</button>
           </div>
         } @else {
-          <p class="text-text-muted">Tarea cancelada. Los créditos se han devuelto.</p>
+          <p class="text-text-muted">Tarea cancelada.@if (t.creditsCost) { Los créditos se han devuelto.}</p>
         }
       </div>
     } @else {
@@ -273,7 +285,7 @@
                   <span class="mt-1 block h-1 rounded-pill bg-surface-3"><span class="block h-full rounded-pill bg-highlight" [style.width.%]="task.progress"></span></span>
                 }
               </span>
-              <span class="text-xs text-text-muted flex items-center gap-0.5"><ui-icon name="zap" [size]="12" />{{ task.creditsCost }}</span>
+              @if (task.creditsCost) { <span class="text-xs text-text-muted flex items-center gap-0.5"><ui-icon name="zap" [size]="12" />{{ task.creditsCost }}</span> }
             </button>
           </li>
         }
@@ -283,3 +295,4 @@
 </div>
 
 <app-export-modal [asset]="exporting()" (closed)="exporting.set(null)" />
+<app-order-modal [asset]="ordering()" (closed)="ordering.set(null)" />

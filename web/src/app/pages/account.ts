@@ -22,6 +22,13 @@ const REASON: Record<LedgerEntry['reason'], string> = {
     <div class="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
       <h1 class="text-xl">Tu cuenta</h1>
       @if (gates.me(); as me) {
+        @if (me.generations) {
+          <!-- tienda: nada de planes ni créditos; lo útil son los pedidos -->
+          <section class="card p-6 flex flex-wrap items-center gap-3" aria-label="Tus pedidos">
+            <p class="text-sm flex-1">Tus figuras compradas y su envío están en Mis pedidos.</p>
+            <a routerLink="/pedidos" class="btn btn-secondary">Ver mis pedidos</a>
+          </section>
+        } @else {
         <section class="card p-6 grid sm:grid-cols-3 gap-6" aria-label="Plan y créditos">
           <div><p class="hint">Plan</p><p class="text-lg">{{ me.plan.name }}</p>
             @if (me.plan.priceMonthCents > 0 && billing() === 'stripe') {
@@ -64,6 +71,7 @@ const REASON: Record<LedgerEntry['reason'], string> = {
             </div>
           }
         </section>
+        }
 
         <section class="card p-6 flex flex-wrap items-center gap-3" aria-label="Sesión">
           <p class="text-sm flex-1">Has entrado como <strong>{{ me.profile.email }}</strong></p>

@@ -19,6 +19,7 @@ import { assetRoutes } from './routes/assets.js';
 import { billingRoutes, stripeWebhook } from './routes/billing.js';
 import { eventRoutes } from './routes/events.js';
 import { localFiles } from './routes/files.js';
+import { adminRoutes, orderRoutes, shopRoutes } from './routes/orders.js';
 import { taskRoutes } from './routes/tasks.js';
 import { uploadRoutes } from './routes/uploads.js';
 
@@ -122,6 +123,9 @@ export function createApp(ctx: Ctx) {
   app.use('/api/tasks', auth, (req, res, next) => (req.method === 'POST' ? createTaskLimit(req, res, next) : next()), taskRoutes(ctx));
   app.use('/api/assets', auth, limiter(120), assetRoutes(ctx));
   app.use('/api/billing', auth, limiter(10), billingRoutes(ctx));
+  app.use('/api/shop', shopRoutes(ctx));
+  app.use('/api/orders', auth, limiter(30), orderRoutes(ctx));
+  app.use('/api/admin', auth, limiter(120), adminRoutes(ctx));
   app.use('/api/events', auth, events);
   app.use((_req, _res, next) => next(new HttpError(404, 'not_found', 'Ruta no encontrada')));
   app.use(errorHandler(ctx));

@@ -48,9 +48,19 @@ import { Api } from '../data/api';
 
       <div class="ml-auto flex items-center gap-2">
         @if (gates.me(); as me) {
-          <a routerLink="/cuenta" class="btn btn-sm btn-ghost" [attr.aria-label]="'Créditos disponibles: ' + me.credits.available">
-            <ui-icon name="zap" /> {{ me.credits.available | number: '1.0-0' : 'es' }}
-          </a>
+          @if (me.generations; as g) {
+            <!-- tienda: lo que importa es cuántos modelos gratis quedan hoy y los pedidos -->
+            @if (me.isAdmin) { <a routerLink="/taller" class="btn btn-sm btn-ghost">Taller</a> }
+            <a routerLink="/pedidos" class="btn btn-sm btn-ghost">Mis pedidos</a>
+            @if (g.perDay) {
+              <span class="hidden sm:inline text-xs text-text-muted figures" [attr.aria-label]="'Modelos gratis que te quedan hoy: ' + remaining(g)">
+                {{ remaining(g) }} de {{ g.perDay }} gratis hoy</span>
+            }
+          } @else {
+            <a routerLink="/cuenta" class="btn btn-sm btn-ghost" [attr.aria-label]="'Créditos disponibles: ' + me.credits.available">
+              <ui-icon name="zap" /> {{ me.credits.available | number: '1.0-0' : 'es' }}
+            </a>
+          }
           <a routerLink="/cuenta" class="w-8 h-8 rounded-full bg-surface-3 grid place-items-center text-xs uppercase"
             [attr.aria-label]="'Tu cuenta (' + me.profile.email + ')'">{{ me.profile.displayName.slice(0, 2) }}</a>
         } @else {
@@ -82,6 +92,10 @@ export class TopNav {
     { path: '/', label: 'Inicio' }, { path: '/crear', label: 'Crear' }, { path: '/mis-modelos', label: 'Mis modelos' },
     { path: '/galeria', label: 'Galería' }, { path: '/precios', label: 'Precios' },
   ];
+
+  protected remaining(g: { perDay: number | null; today: number }): number {
+    return Math.max(0, (g.perDay ?? 0) - g.today);
+  }
 
   @HostListener('document:click', ['$event'])
   protected outside(e: MouseEvent): void {

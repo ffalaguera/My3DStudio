@@ -1,12 +1,12 @@
-import { a11y, chooseImage, credits, expect, signIn, sql, test, waitForModel } from './fixtures';
+import { a11y, chooseImage, expect, signIn, sql, test, waitForModel } from './fixtures';
 
 test.describe('F01 imagen → modelo 3D', () => {
-  test('F01-H1 inicio → imagen → Generar → visor → exportar GLB', async ({ page }) => {
+  test('F01-H1 inicio → imagen → crear → visor (tienda: sin descargas)', async ({ page }) => {
     await page.goto('/');
     expect(await a11y(page), 'axe S01').toEqual([]);
     await chooseImage(page, 'jarron.png');
     await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
-    await page.getByRole('button', { name: /^Generar/ }).click();
+    await page.getByRole('button', { name: 'Crear mi figura · gratis' }).click();
     // sin sesión: se pide acceso y después arranca sola
     await expect(page.getByRole('dialog', { name: 'Entra y empieza a crear' })).toBeVisible();
     await signIn(page);
@@ -14,31 +14,12 @@ test.describe('F01 imagen → modelo 3D', () => {
     await expect(page.getByRole('progressbar').first()).toBeVisible();
     expect(await a11y(page), 'axe S04').toEqual([]);
     await waitForModel(page);
-    expect(await credits(page)).toBe(50); // 100 gratis - 50 de un modelo
     const result = page.getByRole('region', { name: 'Resultado' });
     await expect(result.getByRole('heading', { name: 'jarron' })).toBeVisible();
     await expect(result.getByRole('img', { name: /Modelo 3D: jarron/ })).toBeVisible();
     expect(await a11y(page), 'axe S05').toEqual([]);
 
-    await result.getByRole('button', { name: 'Exportar' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Exportar modelo' });
-    await expect(dialog).toBeVisible();
-    expect(await a11y(page, 'dialog[open]'), 'axe S08').toEqual([]);
-    // La descarga real del navegador ya se verificó a mano; aquí se intercepta el archivo firmado
-    // (las descargas reales de Edge dejan un error colgado en Playwright al cerrar la página).
-    let fileUrl = '';
-    await page.route('**/files/**', async (route) => {
-      fileUrl = route.request().url();
-      await route.fulfill({ status: 204 });
-    });
-    const exportRes = page.waitForResponse((r) => r.url().endsWith('/export') && r.request().method() === 'POST');
-    await dialog.getByRole('button', { name: 'Descargar' }).click();
-    expect((await exportRes).status()).toBe(200);
-    await expect(page.getByRole('status').filter({ hasText: /Descargando jarron\.glb/ })).toBeVisible();
-    await expect.poll(() => fileUrl).toContain('model.glb');
-    const file = await page.request.get(fileUrl);
-    expect(file.status()).toBe(200);
-    expect((await file.body()).subarray(0, 4).toString('ascii')).toBe('glTF');
+    await expect(result.getByRole('button', { name: 'Exportar' })).toHaveCount(0);
   });
 
   test('F01-E2 doble clic en Generar crea una sola tarea', async ({ page }) => {
@@ -51,7 +32,6 @@ test.describe('F01 imagen → modelo 3D', () => {
     await page.waitForTimeout(1500);
     const rows = await sql(`select count(*)::int as n from tasks t join profiles p on p.id = t.user_id where p.email = $1`, [email]);
     expect(rows[0].n).toBe(1);
-    expect(await credits(page)).toBe(50); // 100 gratis - 50 de un modelo
   });
 
   test('F01-E3 recargar a mitad: la tarea sigue y termina', async ({ page }) => {
@@ -84,7 +64,6 @@ test.describe('F01 imagen → modelo 3D', () => {
     await expect(page.getByRole('alert').filter({ hasText: /Formato no admitido/ })).toBeVisible();
     await chooseImage(page, 'mini.png', 100);
     await expect(page.getByRole('alert').filter({ hasText: /demasiado pequeña/ })).toBeVisible();
-    expect(await credits(page)).toBe(100);
   });
 
   test('F01-E6 nombre con acentos y espacios', async ({ page }) => {
@@ -109,7 +88,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  test('F01-N1 la generación falla: créditos devueltos y Reintentar', async ({ page }) => {
+  test('F01-N1 la generación falla: aviso y Reintentar', async ({ page }) => {
     await page.goto('/crear');
     await signIn(page);
     await chooseImage(page, 'fallo.png');
@@ -117,9 +96,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await page.getByRole('button', { name: /^Generar/ }).click();
     const alert = page.getByRole('region', { name: 'Resultado' }).getByRole('alert');
     await expect(alert).toContainText('no ha podido', { timeout: 30_000 });
-    await expect(alert).toContainText('Te hemos devuelto los 50 créditos');
     await expect(alert.getByRole('button', { name: 'Reintentar' })).toBeVisible();
-    expect(await credits(page)).toBe(100);
   });
 
   test('F01-N2 sesión no válida: vuelve a pedir acceso sin errores 500', async ({ page }) => {

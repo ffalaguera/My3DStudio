@@ -48,7 +48,51 @@ export interface Me {
   plan: PlanLimits;
   credits: Credits;
   usage: { exportsThisMonth: number; savedModels: number; activeTasks: number };
+  /** Tienda: generaciones gratis de hoy (perDay null = sin tope). null en el modelo de créditos. */
+  generations?: { perDay: number | null; today: number } | null;
+  /** Acceso al panel del taller (pedidos y archivos para imprimir). */
+  isAdmin?: boolean;
 }
+
+// ------------------------------------------------------------------ tienda de figuras impresas
+export type SizeId = 's' | 'm' | 'l';
+export interface ShopSize { id: SizeId; name: string; heightMm: number; priceCents: number }
+export interface ShopColor { id: string; name: string; hex: string }
+export interface Catalog {
+  sizes: ShopSize[];
+  colors: ShopColor[];
+  shippingCents: number;
+  currency: string;
+  maxQuantity: number;
+  deliveryDays: { min: number; max: number };
+  /** Sin Stripe en desarrollo: el pago se simula en la página del pedido. */
+  demoPayments: boolean;
+}
+export type OrderStatus = 'pending_payment' | 'paid' | 'printing' | 'shipped' | 'cancelled' | 'refunded';
+export interface Order {
+  id: string;
+  assetId: string | null;
+  assetName: string;
+  size: SizeId;
+  heightMm: number;
+  color: string;
+  base: boolean;
+  quantity: number;
+  unitCents: number;
+  shippingCents: number;
+  totalCents: number;
+  currency: string;
+  status: OrderStatus;
+  tracking: string | null;
+  shipping: { name?: string; address?: { line1?: string; line2?: string; city?: string; postal_code?: string; country?: string } } | null;
+  createdAt: string;
+  paidAt: string | null;
+  shippedAt: string | null;
+  /** Solo en el panel del taller. */
+  email?: string | null;
+  note?: string | null;
+}
+export interface OrderRequest { assetId: string; size: SizeId; color: string; base: boolean; quantity: number }
 
 export interface Upload {
   id: string;
@@ -161,6 +205,8 @@ export interface Capabilities {
   exportFormats: ExportFormat[];
   /** simulated = FakeApi; stripe = Checkout real; off = el servidor aún no tiene Stripe configurado */
   billing: 'simulated' | 'stripe' | 'off';
+  /** shop: generar gratis y vender figuras impresas (sin descargas). credits: el modelo anterior. */
+  businessModel: 'shop' | 'credits';
 }
 
 /** Pack de créditos sin caducidad (pago único). */
@@ -209,6 +255,17 @@ export abstract class Api {
   abstract exportAsset(id: string, format: ExportFormat, print?: PrintOptions): Promise<{ url: string; filename: string; print?: PrintReport }>;
   /** Vista previa antes de pagar: la imagen de referencia de un texto, sin gastar créditos. */
   abstract previewImage(prompt: string): Promise<Upload>;
+
+  // Tienda: GET /shop/catalog, POST /orders (→ URL de pago), GET /orders(/:id), POST /orders/:id/demo-pay
+  abstract catalog(): Promise<Catalog>;
+  abstract createOrder(req: OrderRequest): Promise<{ order: Order; url: string }>;
+  abstract orders(): Promise<Order[]>;
+  abstract order(id: string): Promise<Order>;
+  abstract demoPay(id: string): Promise<Order>;
+  // Panel del taller: GET /admin/orders, PATCH /admin/orders/:id, POST /admin/orders/:id/file
+  abstract adminOrders(status: 'open' | 'all' | OrderStatus): Promise<Order[]>;
+  abstract adminUpdateOrder(id: string, patch: { status?: 'printing' | 'shipped' | 'cancelled'; tracking?: string; note?: string }): Promise<Order>;
+  abstract adminOrderFile(id: string, format: 'stl' | '3mf'): Promise<{ url: string; filename: string; print: PrintReport }>;
 
   // /billing (Stripe Checkout en el real)
   abstract checkout(planId: string, interval: 'month' | 'year'): Promise<void>;

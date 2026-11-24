@@ -32,6 +32,8 @@ export async function makeEnv(opts: { realPlans?: boolean; env?: Record<string, 
     STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
     PROVIDER_MAX_CONCURRENCY: '50',
     GENERATION_DAILY_LIMIT: '0',
+    // los tests antiguos son del modelo de créditos; los de la tienda pasan BUSINESS_MODEL=shop
+    BUSINESS_MODEL: 'credits',
     ...fixture,
     ...opts.env,
   });

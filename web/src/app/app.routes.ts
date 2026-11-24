@@ -10,7 +10,12 @@ export const routes: Routes = [
     data: { icon: 'box', title: 'Fichas públicas, próximamente', text: 'Pronto podrás compartir tus modelos públicos con un enlace.' } },
   { path: 'galeria', title: 'Galería', loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),     // S09
     data: { icon: 'layout-grid', title: 'La galería llega pronto', text: 'Aquí verás los modelos públicos de la comunidad.' } },
-  { path: 'precios', title: 'Planes', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },             // S10 S11
+  // Tienda: precios de las figuras. Los planes de créditos (pages/pricing) quedan para BUSINESS_MODEL=credits
+  { path: 'precios', title: 'Precios', loadComponent: () => import('./pages/shop-prices').then((m) => m.ShopPrices) },
+  { path: 'planes', title: 'Planes', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },             // S10 S11
+  { path: 'pedidos', title: 'Mis pedidos', loadComponent: () => import('./pages/orders').then((m) => m.Orders) },
+  { path: 'pedidos/:id', title: 'Pedido', loadComponent: () => import('./pages/orders').then((m) => m.OrderDetail) },
+  { path: 'taller', title: 'Taller', loadComponent: () => import('./pages/workshop').then((m) => m.Workshop) },
   { path: 'cuenta', title: 'Tu cuenta', loadComponent: () => import('./pages/account').then((m) => m.Account) },           // S12
   { path: 'entrar', title: 'Entrando', loadComponent: () => import('./pages/sign-in-link').then((m) => m.SignInLink) },
   { path: 'privacidad', title: 'Privacidad', data: { doc: 'privacy' }, loadComponent: () => import('./pages/legal').then((m) => m.Legal) },

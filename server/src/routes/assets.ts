@@ -68,6 +68,8 @@ export function assetRoutes(ctx: Ctx) {
     }).refine((b) => !b.print || b.format === 'stl' || b.format === '3mf', { path: ['print'], message: 'Las opciones de impresión son para STL y 3MF' })
       .parse(req.body);
     const optionsHash = print ? `h${print.heightMm}-b${print.base ? 1 : 0}` : 'default';
+    // tienda: se vende la figura impresa, no el archivo
+    if (cfg.BUSINESS_MODEL === 'shop') throw new HttpError(403, 'no_downloads', 'Los modelos no se descargan: pide tu figura impresa');
     const userId = req.user!.id;
     const a = await db.query('select name from assets where id = $1 and user_id = $2', [id, userId]);
     assertOwner(a);

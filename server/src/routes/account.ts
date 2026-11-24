@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { isAdmin } from './orders.js';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Ctx } from '../context.js';
@@ -17,6 +18,7 @@ export function accountRoutes(ctx: Ctx, auth: ReturnType<typeof import('../lib/a
       exportFormats: ctx.cfg.BLENDER_PATH ? ['glb', 'obj', 'stl', '3mf', 'usdz', 'fbx'] : ['glb', 'obj', 'stl', '3mf'],
       billing: !!ctx.stripe,
       localAuth: ctx.cfg.LOCAL_AUTH,
+      businessModel: ctx.cfg.BUSINESS_MODEL,
       // Solo en desarrollo: deja que los e2e se nieguen a correr contra el motor de pago.
       ...(ctx.cfg.LOCAL_AUTH ? { engine: ctx.cfg.GENERATION_PROVIDER === 'fake' ? 'demo' : 'real' } : {}),
     });
@@ -62,7 +64,8 @@ export function accountRoutes(ctx: Ctx, auth: ReturnType<typeof import('../lib/a
       db.query(
         `select (select count(*) from exports where user_id = $1 and created_at >= date_trunc('month', now())) as exports,
                 (select count(*) from assets where user_id = $1) as saved,
-                (select count(*) from tasks where user_id = $1 and status in ('queued','running')) as active`,
+                (select count(*) from tasks where user_id = $1 and status in ('queued','running')) as active,
+                (select count(*) from tasks where user_id = $1 and status <> 'cancelled' and created_at >= date_trunc('day', now())) as today`,
         [u.id],
       ),
     ]);
@@ -75,6 +78,11 @@ export function accountRoutes(ctx: Ctx, auth: ReturnType<typeof import('../lib/a
         available: a.monthly_balance + a.permanent_balance, cycleEndsAt: a.monthly_cycle_ends_at?.toISOString() ?? null,
       },
       usage: { exportsThisMonth: Number(usage.rows[0].exports), savedModels: Number(usage.rows[0].saved), activeTasks: Number(usage.rows[0].active) },
+      // tienda: generaciones gratis que quedan hoy (null = sin tope) y acceso al panel del taller
+      generations: ctx.cfg.BUSINESS_MODEL === 'shop'
+        ? { perDay: ctx.cfg.GENERATION_FREE_PER_DAY || null, today: Number(usage.rows[0].today) }
+        : null,
+      isAdmin: isAdmin(ctx, p.rows[0].email),
     });
   });
 
