@@ -7,7 +7,7 @@ import { Handoff } from '../features/workspace/handoff';
 import { PaintingViewer, type PaintStep } from '../features/showcase/painting-viewer';
 import { Api, Asset, Catalog, Series } from '../data/api';
 import { Gates } from '../shell/gates';
-import { SHOWCASE, type ShowcaseModel } from '../data/showcase';
+import { SHOWCASE } from '../data/showcase';
 
 
 /**
@@ -34,7 +34,7 @@ import { SHOWCASE, type ShowcaseModel } from '../data/showcase';
                El hueco tiene la misma altura que el visor para que no haya saltos. -->
           @defer (on idle) {
             <app-painting-viewer class="h-[16.5rem] sm:h-[30rem] lg:h-[min(64svh,36rem)]"
-              [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="step" />
+              [url]="'/showcase/' + example.slug + '.glb'" [name]="example.name" [source]="example.prompt" [step]="step" />
           } @placeholder {
             <div class="h-[16.5rem] sm:h-[30rem] lg:h-[min(64svh,36rem)] grid place-items-center" aria-hidden="true">
               <span class="w-40 h-40 rounded-full bg-surface-3/70"></span>
@@ -46,18 +46,6 @@ import { SHOWCASE, type ShowcaseModel } from '../data/showcase';
               <button type="button" class="btn btn-primary" (click)="reload()">Recargar la página</button>
             </div>
           }
-          <!-- Radios nativos: una sola parada de tabulador y flechas para cambiar de ejemplo -->
-          <fieldset class="min-w-0">
-            <legend class="text-xs text-text-muted mb-2">Modelos reales, hechos con My3DStudio a partir de una frase:</legend>
-            <div class="flex sm:flex-wrap gap-2 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1">
-              @for (e of examples; track e.slug) {
-                <label class="focus-ring-within relative h-8 px-3 shrink-0 inline-flex items-center cursor-pointer rounded-pill border border-border-input text-xs font-medium text-text-muted transition-colors duration-fast hover:text-text hover:border-text has-[:checked]:bg-text has-[:checked]:border-text has-[:checked]:text-bg">
-                  <input type="radio" name="showcase-example" class="sr-only" [value]="e.slug" [checked]="example().slug === e.slug" (change)="example.set(e)" />
-                  {{ e.name }}
-                </label>
-              }
-            </div>
-          </fieldset>
         </div>
 
         <div class="lg:col-span-5 lg:row-start-2 flex flex-col gap-6">
@@ -220,8 +208,8 @@ export class Home {
   protected readonly dragging = signal(false);
   // el modelo se enseña con su textura (modo «Referencia»)
   protected readonly step: PaintStep = 'textura';
-  protected readonly examples = SHOWCASE;
-  protected readonly example = signal<ShowcaseModel>(SHOWCASE[0]);
+  // la portada enseña el dragón; los demás modelos están en la galería
+  protected readonly example = SHOWCASE[0];
   private file: File | null = null;
   private readonly assets = toSignal(this.api.assets(), { initialValue: [] as Asset[] });
   protected recent = () => this.assets().slice(0, 6);
