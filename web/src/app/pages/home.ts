@@ -43,10 +43,16 @@ const SHOWCASE = [
                El hueco tiene la misma altura que el visor para que no haya saltos. -->
           @defer (on idle) {
             <app-painting-viewer class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)]"
-              [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="viewStep()" />
+              [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="step()" />
           } @placeholder {
             <div class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)] grid place-items-center" aria-hidden="true">
               <span class="w-40 h-40 rounded-full bg-primer-deep/60"></span>
+            </div>
+          } @error {
+            <!-- si el código del visor no llega a descargarse, se avisa en vez de dejar el hueco vacío -->
+            <div class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)] grid place-content-center justify-items-center gap-3 text-sm text-ink text-center">
+              <p>No se ha podido cargar el visor 3D.</p>
+              <button type="button" class="btn bg-ink text-bone hover:bg-ink-soft" (click)="reload()">Recargar la página</button>
             </div>
           }
           <!-- Radios nativos: una sola parada de tabulador y flechas para cambiar de ejemplo (antes, cinco paradas) -->
@@ -65,8 +71,7 @@ const SHOWCASE = [
 
         <div class="lg:col-span-5 lg:row-start-2 flex flex-col gap-6">
           <!-- Bote 1: la zona de subida de verdad -->
-          <div class="flex items-start gap-4" (mouseenter)="hoverFoto.set(true)" (mouseleave)="hoverFoto.set(false)"
-            (focusin)="hoverFoto.set(true)" (focusout)="hoverFoto.set(false)">
+          <div class="flex items-start gap-4">
             <input #file type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" tabindex="-1" aria-hidden="true"
               (change)="picked($event)" />
             <button type="button" (click)="file.click()" (dragover)="over($event)" (dragleave)="dragging.set(false)" (drop)="drop($event)"
@@ -252,11 +257,8 @@ export class Home {
   protected readonly preview = signal<string | null>(null);
   protected readonly error = signal('');
   protected readonly dragging = signal(false);
-  protected readonly hoverFoto = signal(false);
   // la figura se imprime de un color: el modelo se enseña en gris imprimación, como saldrá
   protected readonly step = signal<PaintStep>('malla');
-  /** Al pasar por el bote 1, el modelo enseña de dónde salió. */
-  protected readonly viewStep = computed<PaintStep>(() => (this.hoverFoto() ? 'foto' : this.step()));
   protected readonly examples = SHOWCASE;
   protected readonly example = signal<(typeof SHOWCASE)[number]>(SHOWCASE[0]);
   private file: File | null = null;
@@ -305,6 +307,10 @@ export class Home {
 
   protected choose(s: PaintStep): void {
     this.step.set(this.step() === s ? 'malla' : s);
+  }
+
+  protected reload(): void {
+    location.reload();
   }
 
   protected over(e: DragEvent): void {

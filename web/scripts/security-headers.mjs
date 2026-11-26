@@ -23,7 +23,8 @@ const connect = ["'self'", api, supabase, supabase?.replace('https://', 'wss://'
 
 const csp = [
   "default-src 'self'",
-  `script-src 'self'${google ? ` ${google}/gsi/client` : ''}`,
+  // 'wasm-unsafe-eval': el descompresor meshopt de los modelos .glb es WebAssembly; permite compilar wasm, no eval() de JS.
+  `script-src 'self' 'wasm-unsafe-eval'${google ? ` ${google}/gsi/client` : ''}`,
   // Angular añade estilos de componente en <style>; sin scripts en línea, esto no abre la puerta al XSS.
   `style-src 'self' 'unsafe-inline'${google ? ` ${google}/gsi/style` : ''}`,
   ...(google ? [`frame-src ${google}/gsi/`] : []),

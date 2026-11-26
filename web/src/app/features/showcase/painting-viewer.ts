@@ -6,22 +6,21 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Icon } from '../../ui/icon';
 
 let viewerSeq = 0;
 
-/** Los cuatro botes de la guía: cada uno repinta el mismo modelo. */
-export type PaintStep = 'foto' | 'malla' | 'textura' | 'archivo';
+/** Los botes de la guía: cada uno repinta el mismo modelo. */
+export type PaintStep = 'malla' | 'textura' | 'archivo';
 
 interface Facts { faces: number; w: number; h: number; d: number }
 
 /**
  * Visor de la portada: un modelo real sobre una peana redonda que gira con inercia.
- * Cada paso de la guía lo repinta: silueta (foto de origen), imprimación gris, textura y archivo con medidas.
+ * Cada paso de la guía lo repinta: imprimación gris, textura y archivo con medidas.
  */
 @Component({
   selector: 'app-painting-viewer',
-  imports: [DecimalPipe, Icon],
+  imports: [DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'relative block select-none' },
   template: `
@@ -31,17 +30,6 @@ interface Facts { faces: number; w: number; h: number; d: number }
       (keydown)="keys($event)"></div>
     <p [id]="descId" class="sr-only">{{ description() }}</p>
 
-    @if (state() === 'ready') {
-      <div role="group" aria-label="Controles del modelo"
-        class="absolute right-2 bottom-2 z-10 flex gap-1 p-1 rounded-pill bg-bone/90 text-ink shadow-[0_4px_12px_rgb(0_0_0/0.2)]">
-        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Girar a la izquierda" (click)="rotate(-1)"><ui-icon name="rotate-ccw" /></button>
-        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Girar a la derecha" (click)="rotate(1)"><ui-icon name="rotate-cw" /></button>
-        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" [attr.aria-pressed]="spinning()"
-          aria-label="Giro automático" (click)="toggleSpin()"><ui-icon [name]="spinning() ? 'pause' : 'play'" /></button>
-        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Vista inicial" (click)="resetView()"><ui-icon name="scan" /></button>
-      </div>
-    }
-
     @if (state() === 'loading') {
       <div class="absolute inset-0 grid place-items-center pointer-events-none">
         <span class="w-40 h-40 rounded-full bg-primer-deep/60 animate-pulse"></span>
@@ -49,6 +37,12 @@ interface Facts { faces: number; w: number; h: number; d: number }
     }
     @if (state() === 'no-webgl') {
       <p class="absolute inset-0 grid place-items-center text-sm text-ink p-8 text-center">Tu navegador no muestra 3D, pero el modelo se descarga igual.</p>
+    }
+    @if (state() === 'error') {
+      <div class="absolute inset-0 grid place-content-center justify-items-center gap-3 text-sm text-ink p-8 text-center">
+        <p>No se ha podido cargar el modelo.</p>
+        <button type="button" class="btn bg-ink text-bone hover:bg-ink-soft" (click)="retry()">Reintentar</button>
+      </div>
     }
 
     <!-- Paso «Archivo»: etiquetas con línea guía, cifras tabulares -->
@@ -67,21 +61,13 @@ interface Facts { faces: number; w: number; h: number; d: number }
         <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Polígonos</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-extrabold">{{ f.faces | number: '1.0-0' : 'es' }}</dd></div>
       </dl>
     }
-
-    <!-- Paso «Foto»: la frase de la que salió el modelo -->
-    @if (step() === 'foto' && source()) {
-      <figure class="absolute left-0 bottom-0 max-w-[22rem] ground-bone px-4 py-3 shadow-[0_8px_20px_rgb(0_0_0/0.25)]">
-        <figcaption class="text-xs">Salió de esta frase</figcaption>
-        <blockquote class="font-display text-xl font-bold leading-tight">«{{ source() }}»</blockquote>
-      </figure>
-    }
   `,
 })
 export class PaintingViewer implements AfterViewInit, OnDestroy {
   readonly url = input.required<string>();
   readonly name = input('');
   readonly step = input<PaintStep>('textura');
-  /** Frase o descripción de origen (paso «Foto»). */
+  /** Frase o descripción de origen, para la descripción accesible del visor. */
   readonly source = input('');
   /** Altura a la que se imprimiría la figura: convierte la caja del modelo a milímetros. */
   readonly heightMm = input(60);
@@ -96,7 +82,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     const f = this.facts();
     const from = this.source() ? `Generado a partir de la frase «${this.source()}». ` : '';
     const size = f ? `Impreso mide ${Math.round(f.h)} mm de alto, ${Math.round(f.w)} × ${Math.round(f.d)} mm de base y tiene ${f.faces.toLocaleString('es')} polígonos. ` : '';
-    return `${from}${size}Gíralo con las flechas izquierda y derecha o con los botones del visor.`;
+    return `${from}${size}Gíralo con las flechas izquierda y derecha; la barra espaciadora pausa o reanuda el giro automático.`;
   });
 
   private readonly zone = inject(NgZone);
@@ -111,7 +97,6 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   private base?: THREE.Mesh;
   private originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   private readonly primer = new THREE.MeshStandardMaterial({ color: 0xa9abad, roughness: 0.96, metalness: 0 });
-  private readonly silhouette = new THREE.MeshBasicMaterial({ color: 0x1c1b1a });
   private anchors: THREE.Vector3[] = [];
   private resize?: ResizeObserver;
   private visibility?: IntersectionObserver;
@@ -202,7 +187,6 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     this.controls?.dispose();
     this.clear();
     this.primer.dispose();
-    this.silhouette.dispose();
     this.renderer?.dispose();
   }
 
@@ -224,7 +208,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
         if (!m.isMesh) return;
         m.geometry.dispose();
         const own = this.originals.get(m) ?? m.material;
-        (Array.isArray(own) ? own : [own]).forEach((mat) => mat !== this.primer && mat !== this.silhouette && mat.dispose());
+        (Array.isArray(own) ? own : [own]).forEach((mat) => mat !== this.primer && mat.dispose());
       });
     }
     this.originals.clear();
@@ -282,9 +266,15 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
         this.paint(this.step());
       }
       this.state.set('ready');
-    } catch {
-      if (seq === this.seq) this.state.set('error');
+    } catch (err) {
+      if (seq !== this.seq) return;
+      console.error('No se pudo cargar el modelo de la portada', err);
+      this.state.set('error');
     }
+  }
+
+  protected retry(): void {
+    void this.load(this.url());
   }
 
   private frame(): void {
@@ -303,7 +293,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   /** Repinta el modelo según el bote elegido. */
   private paint(step: PaintStep): void {
     for (const [mesh, original] of this.originals) {
-      mesh.material = step === 'malla' ? this.primer : step === 'foto' ? this.silhouette : original;
+      mesh.material = step === 'malla' ? this.primer : original;
     }
     this.dirty = true;
   }
@@ -331,27 +321,23 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   }
 
   protected keys(e: KeyboardEvent): void {
+    if (e.key === ' ') {
+      e.preventDefault();
+      this.setSpin(!this.spinning());
+      return;
+    }
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault();
     this.rotate(e.key === 'ArrowLeft' ? -1 : 1);
   }
 
   /** Gira un dieciseisavo de vuelta. Pausa el giro automático: quien gira a mano quiere mirar un punto. */
-  protected rotate(dir: -1 | 1): void {
+  private rotate(dir: -1 | 1): void {
     if (!this.controls) return;
     const offset = this.camera.position.clone().sub(this.controls.target);
     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), dir * (Math.PI / 16));
     this.camera.position.copy(this.controls.target).add(offset);
     this.setSpin(false);
-  }
-
-  protected toggleSpin(): void {
-    this.setSpin(!this.spinning());
-  }
-
-  protected resetView(): void {
-    this.frame();
-    this.controls?.update();
   }
 
   private setSpin(on: boolean): void {
