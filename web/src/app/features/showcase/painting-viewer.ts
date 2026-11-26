@@ -56,9 +56,9 @@ interface Facts { faces: number; w: number; h: number; d: number }
     @if (facts(); as f) {
       <dl class="absolute right-0 top-0 bottom-0 w-32 sm:w-44 flex flex-col justify-center gap-6 pr-2 figures text-ink transition-opacity duration-slow"
         [style.opacity]="step() === 'archivo' ? 1 : 0" [attr.aria-hidden]="step() !== 'archivo'">
-        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Alto, a escala de figura</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-extrabold">{{ heightMm() }} mm</dd></div>
-        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Ancho × fondo</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-extrabold">{{ f.w | number: '1.0-0' : 'es' }} × {{ f.d | number: '1.0-0' : 'es' }} mm</dd></div>
-        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Polígonos</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-extrabold">{{ f.faces | number: '1.0-0' : 'es' }}</dd></div>
+        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Alto, a escala de figura</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-medium">{{ heightMm() }} mm</dd></div>
+        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Ancho × fondo</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-medium">{{ f.w | number: '1.0-0' : 'es' }} × {{ f.d | number: '1.0-0' : 'es' }} mm</dd></div>
+        <div #label class="border-t-2 keyline pt-1 px-2 pb-1 bg-bone/90"><dt class="text-xs">Polígonos</dt><dd class="font-display text-[1.125rem] sm:text-[1.5rem] font-medium">{{ f.faces | number: '1.0-0' : 'es' }}</dd></div>
       </dl>
     }
   `,

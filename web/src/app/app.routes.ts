@@ -8,8 +8,7 @@ export const routes: Routes = [
   { path: 'mis-modelos', title: 'Mis modelos', loadComponent: () => import('./pages/my-models').then((m) => m.MyModels) }, // S06
   { path: 'modelo/:id', title: 'Modelo', loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),   // S07
     data: { icon: 'box', title: 'Fichas públicas, próximamente', text: 'Pronto podrás compartir tus modelos públicos con un enlace.' } },
-  { path: 'galeria', title: 'Galería', loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),     // S09
-    data: { icon: 'layout-grid', title: 'La galería llega pronto', text: 'Aquí verás los modelos públicos de la comunidad.' } },
+  { path: 'galeria', title: 'Galería', loadComponent: () => import('./pages/gallery').then((m) => m.Gallery) },            // S09
   // Tienda: precios de las figuras. Los planes de créditos (pages/pricing) quedan para BUSINESS_MODEL=credits
   { path: 'precios', title: 'Precios', loadComponent: () => import('./pages/shop-prices').then((m) => m.ShopPrices) },
   { path: 'planes', title: 'Planes', loadComponent: () => import('./pages/pricing').then((m) => m.Pricing) },             // S10 S11

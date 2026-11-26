@@ -1,40 +1,25 @@
 /* Tokens generados desde replica/design/tokens.json. No poner hex ni px de diseño aquí.
-   Mundo: «La guía de pintado» (.impeccable/surfaces y DESIGN.md). */
+   Estilo claro editorial (2026-11-26): fondo hueso luminoso, titulares en serif, acento azul profundo. */
 @import "../../replica/design/tokens.css";
 @import "@fontsource-variable/inter/index.css";
 
-/* Titulares: Sofia Sans Extra Condensed (OFL), autoalojada en public/fonts. Variable: un archivo por subconjunto. */
+/* Titulares: Newsreader (OFL, de @fontsource-variable/newsreader 5.3.0), autoalojada en public/fonts para poder precargarla.
+   Serif editorial variable con eje de tamaño óptico: a tamaño grande se afina sola. Un archivo por subconjunto. */
 @font-face {
-  font-family: "Sofia Sans Extra Condensed";
+  font-family: "Newsreader Variable";
   font-style: normal;
-  font-weight: 400 900;
+  font-weight: 200 800;
   font-display: swap;
-  src: url("/fonts/sofia-sans-extra-condensed-latin.woff2") format("woff2");
+  src: url("/fonts/newsreader-latin-opsz-normal.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: "Sofia Sans Extra Condensed";
+  font-family: "Newsreader Variable";
   font-style: normal;
-  font-weight: 400 900;
+  font-weight: 200 800;
   font-display: swap;
-  src: url("/fonts/sofia-sans-extra-condensed-latin-ext.woff2") format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-/* Respaldo calibrado para los titulares (modern-web-guidance: visually-stable-font-fallbacks).
-   Sofia es muy estrecha: sin calibrar, en Android/iOS el titular pasaba de 2 a 3 líneas al llegar la fuente
-   (40 px de salto). size-adjust escala la fuente local para que ocupe el mismo ancho que Sofia
-   (medido con el texto real en mayúsculas, peso 800): 73,2 % de Arial Narrow y 53,4 % de Arial/Helvetica/Roboto.
-   La altura de línea de los titulares es fija, así que con el mismo ancho no se mueve nada. */
-@font-face {
-  font-family: "Sofia fallback narrow";
-  src: local("Arial Narrow"), local("ArialNarrow"), local("ArialNarrow-Bold");
-  size-adjust: 73.2%;
-}
-@font-face {
-  font-family: "Sofia fallback";
-  src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto"), local("Roboto-Regular"), local("Liberation Sans");
-  size-adjust: 53.4%;
+  src: url("/fonts/newsreader-latin-ext-opsz-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @tailwind base;
@@ -42,14 +27,16 @@
 @tailwind utilities;
 
 @layer base {
-  /* La voz condensada titula páginas y secciones del mundo; los rótulos pequeños de los paneles siguen en Inter */
-  h1:not(.text-xs):not(.text-sm), :is(.ground-primer, .ground-bone, .ground-ink) h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; }
+  /* La serif titula páginas y secciones; los rótulos pequeños de los paneles siguen en Inter */
+  h1:not(.text-xs):not(.text-sm), :is(.ground-primer, .ground-bone, .ground-ink) h2 {
+    font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; font-optical-sizing: auto;
+  }
   h1, h2 { text-wrap: balance; }
   h3 { font-weight: 600; text-wrap: balance; }
   button:disabled { cursor: not-allowed; }
 
   /* Lo que el navegador pinta por su cuenta también lleva el mundo */
-  ::selection { background: rgb(var(--color-lid-mustard)); color: rgb(var(--color-ink)); }
+  ::selection { background: rgb(var(--color-highlight-surface)); color: rgb(var(--color-ink)); }
   :focus-visible { outline: 2px solid rgb(var(--color-focus)); outline-offset: 2px; }
   /* Controles ocultos o sin borde propio (radios sr-only, el input del buscador): el contorno de foco
      se pinta en su contenedor visible, el mismo que el global. */
@@ -59,16 +46,8 @@
 
   /* Desplegables de la barra: popover nativo anclado a su botón (modern-web-guidance: navbar).
      Sin popover nativo los oculta el polyfill hasta abrirlos; sin anchor() se usa la declaración anterior. */
-  .nav-anchor-create { anchor-name: --nav-create; }
   .nav-anchor-site { anchor-name: --nav-site; }
   .nav-popover { position: fixed; inset: auto; margin: 0; }
-  .nav-popover-create {
-    position-anchor: --nav-create;
-    top: anchor(bottom);
-    left: anchor(left);
-    margin-block-start: 0.5rem;
-    position-try-fallbacks: flip-block;
-  }
   .nav-popover-site {
     inset-block-start: 4.75rem; /* reserva: navegadores sin anchor() */
     inset-block-start: anchor(--nav-site bottom);
@@ -140,6 +119,19 @@
     border-radius: 9999px;
   }
 
+  /* Enlaces de la barra: texto, subrayado al pasar el ratón; el de la página actual queda subrayado */
+  .nav-link { @apply text-sm text-text-muted py-2 rounded-sm decoration-2 underline-offset-[0.45em] transition-colors duration-fast hover:text-text hover:underline; }
+  .nav-link-active { @apply text-text underline; }
+
+  /* Titulares de sección de las páginas que persuaden: la misma serif que el h1, más pequeña */
+  .section-heading {
+    font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; font-optical-sizing: auto;
+    font-size: 2.25rem; line-height: 1.08; text-wrap: balance;
+  }
+  @media (min-width: 640px) { .section-heading { font-size: 3rem; } }
+  /* Número de paso: círculo con contorno */
+  .step-num { @apply w-7 h-7 rounded-full border border-current grid place-items-center text-xs font-semibold figures; }
+
   .badge { @apply inline-flex items-center h-6 px-2 rounded-pill bg-surface-3 text-xs font-medium text-text-muted; }
 
   .card { @apply rounded-lg bg-surface; }
@@ -166,7 +158,7 @@
     transition: transform var(--motion-fast, 120ms) cubic-bezier(0.16, 1, 0.3, 1), box-shadow var(--motion-fast, 120ms) ease-out;
   }
   .pot-lid[data-lid="blue"] { --lid: var(--color-lid-blue); }
-  .pot-lid[data-lid="mustard"] { --lid: var(--color-lid-mustard); color: rgb(var(--color-ink)); }
+  .pot-lid[data-lid="mustard"] { --lid: var(--color-lid-mustard); }
   .pot-lid[data-lid="green"] { --lid: var(--color-lid-green); }
   .pot-lid[data-lid="primer"] { --lid: var(--color-primer); color: rgb(var(--color-ink)); }
   button:active > .pot-lid, .pot-lid:is(button):active, [aria-pressed="true"] > .pot-lid {

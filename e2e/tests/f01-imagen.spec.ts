@@ -52,7 +52,8 @@ test.describe('F01 imagen → modelo 3D', () => {
     await chooseImage(page, 'lampara.png');
     await expect(page.getByRole('img', { name: 'Imagen de referencia subida' })).toBeVisible();
     await page.getByRole('button', { name: /^Generar/ }).click();
-    await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Mis modelos' }).click();
+    // «Mis modelos» ya no está en la barra: se llega desde «Ver todos» del panel de actividad, sin recargar
+    await page.getByRole('complementary', { name: 'Actividad' }).getByRole('link', { name: 'Ver todos' }).click();
     await expect(page.getByRole('heading', { name: 'Mis modelos' })).toBeVisible();
     await expect(page.getByRole('link', { name: /lampara/ })).toBeVisible({ timeout: 45_000 });
   });

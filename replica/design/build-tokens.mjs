@@ -33,7 +33,7 @@ for (const [k, l] of Object.entries(t.layout)) if (typeof l === "number") v(`lay
 
 const css = `/* GENERADO por build-tokens.mjs desde tokens.json. No editar a mano. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 ${lines.join("\n")}
 }
 

@@ -18,7 +18,8 @@ test.describe('F05 mis modelos', () => {
     await page.getByRole('textbox', { name: 'Nombre del modelo' }).fill('Jarra de agua');
     await page.getByRole('button', { name: 'Guardar', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Resultado' }).getByRole('heading', { name: 'Jarra de agua' })).toBeVisible();
-    await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Mis modelos' }).click();
+    // «Mis modelos» ya no está en la barra: se llega desde «Ver todos» del panel de actividad, sin recargar
+    await page.getByRole('complementary', { name: 'Actividad' }).getByRole('link', { name: 'Ver todos' }).click();
     await expect(page.getByRole('link', { name: /Jarra de agua/ })).toBeVisible();
   });
 

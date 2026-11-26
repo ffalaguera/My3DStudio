@@ -13,11 +13,11 @@ import { Toasts } from '../ui/toast';
   imports: [Icon, Modal, CurrencyPipe, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section aria-labelledby="precios-title" class="ground-primer -mt-[3.75rem] pt-[3.75rem]">
+    <section aria-labelledby="precios-title" class="">
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 pt-8 sm:pt-12 pb-12 flex flex-col gap-8">
         <div class="flex flex-wrap items-end justify-between gap-6">
           <div class="flex flex-col gap-3">
-            <h1 id="precios-title" class="font-display uppercase text-[3.25rem] sm:text-[4.75rem] leading-[0.88]">Precios claros</h1>
+            <h1 id="precios-title" class="font-display text-[3.25rem] sm:text-[4.75rem] leading-[1.05]">Precios claros</h1>
             <p class="text-base max-w-[52ch]">Un modelo cuesta {{ perModel }} créditos y lo ves antes de generar. Si falla, te los devolvemos.
               Sin generaciones gratis: todo lo pagas antes, nunca después. Lo que generas se descarga siempre y cancelas sin preguntas.</p>
           </div>
@@ -32,20 +32,20 @@ import { Toasts } from '../ui/toast';
         @if (!plans().length) {
           <div class="grid md:grid-cols-3 gap-8" aria-busy="true">@for (i of [1, 2, 3]; track i) { <div class="h-96 rounded-lg bg-primer-deep/60 animate-pulse"></div> }</div>
         } @else {
-          <ul class="grid md:grid-cols-3 gap-x-8 gap-y-12 ground-bone px-6 sm:px-10 py-10 shadow-[0_12px_32px_rgb(0_0_0/0.22)]">
+          <ul class="grid md:grid-cols-3 gap-x-8 gap-y-12 bg-surface border border-border rounded-xl px-6 sm:px-10 py-10">
             @for (p of plans(); track p.id; let i = $index) {
               @let current = gates.me()?.plan?.id === p.id;
               <li class="flex flex-col gap-5">
                 <div class="flex items-center gap-4">
                   @let yearly = interval() === 'year' && p.priceYearCents > 0;
-                  <span class="pot-lid w-32 h-32 rounded-full grid place-items-center shrink-0" [attr.data-lid]="lidOf(p.id)">
+                  <span class="w-32 h-32 rounded-full grid place-items-center bg-highlight-surface text-accent shrink-0" [attr.data-lid]="lidOf(p.id)">
                     <span class="flex flex-col items-center leading-none figures">
-                      <span class="font-display text-[2.25rem] font-extrabold">{{ (yearly ? p.priceYearCents : p.priceMonthCents) / 100 | currency: 'EUR' : 'symbol' : '1.0-0' : 'es' }}</span>
+                      <span class="font-display text-[2.25rem] font-medium">{{ (yearly ? p.priceYearCents : p.priceMonthCents) / 100 | currency: 'EUR' : 'symbol' : '1.0-0' : 'es' }}</span>
                       <span class="text-xs font-semibold pt-1">{{ yearly ? 'al año' : 'al mes' }}</span>
                     </span>
                   </span>
                   <div class="min-w-0">
-                    <h2 class="text-[2.25rem] uppercase leading-none">{{ p.name }}</h2>
+                    <h2 class="font-display font-medium text-[2.25rem] leading-none">{{ p.name }}</h2>
                     <p class="text-sm pt-1">{{ audience[p.id] ?? '' }}</p>
                     @if (interval() === 'year' && p.priceYearCents) {
                       <p class="text-xs pt-1 figures">Equivale a {{ monthly(p) / 100 | currency: 'EUR' : 'symbol' : '1.0-2' : 'es' }} al mes</p>
@@ -82,19 +82,19 @@ import { Toasts } from '../ui/toast';
       </div>
     </section>
 
-    <section aria-labelledby="packs-title" class="ground-primer">
+    <section aria-labelledby="packs-title">
       <div class="max-w-[80rem] mx-auto px-4 sm:px-8 pb-16 flex flex-col gap-8">
         <div class="flex flex-wrap items-end justify-between gap-4 border-t-2 keyline pt-8">
-          <h2 id="packs-title" class="text-[3rem] uppercase leading-[0.9]">Packs, sin suscripción</h2>
+          <h2 id="packs-title" class="section-heading">Packs, sin suscripción</h2>
           <p class="text-sm max-w-[40ch]">Compra créditos una vez. No caducan nunca. El de prueba trae 3 modelos por 3 €.</p>
         </div>
         <ul class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
           @for (k of packs(); track k.id; let i = $index) {
             <li class="flex flex-col items-center text-center gap-3">
-              <span class="pot-lid w-32 h-32 rounded-full grid place-items-center" [attr.data-lid]="lidOf(k.id)">
-                <span class="font-display text-[3rem] font-extrabold leading-none figures">{{ k.priceCents / 100 | currency: 'EUR' : 'symbol' : '1.0-0' : 'es' }}</span>
+              <span class="w-32 h-32 rounded-full grid place-items-center bg-highlight-surface text-accent" [attr.data-lid]="lidOf(k.id)">
+                <span class="font-display text-[3rem] font-medium leading-none figures">{{ k.priceCents / 100 | currency: 'EUR' : 'symbol' : '1.0-0' : 'es' }}</span>
               </span>
-              <p class="font-display text-[1.5rem] font-extrabold uppercase leading-none figures">{{ k.credits + k.bonusCredits | number: '1.0-0' : 'es' }} créditos</p>
+              <p class="font-display text-[1.5rem] font-medium leading-none figures">{{ k.credits + k.bonusCredits | number: '1.0-0' : 'es' }} créditos</p>
               <p class="text-sm figures">≈ {{ (k.credits + k.bonusCredits) / perModel | number: '1.0-0' : 'es' }} modelos
                 @if (k.bonusCredits) { · {{ k.bonusCredits | number: '1.0-0' : 'es' }} de regalo }</p>
               <button type="button" class="btn bg-ink text-bone hover:bg-ink-soft" [disabled]="busyPack() === k.id" [attr.aria-busy]="busyPack() === k.id" (click)="buyPack(k)">
