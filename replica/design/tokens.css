@@ -33,7 +33,7 @@
   --color-lid-green: 62 122 79;
   --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-display: "Sofia Sans Extra Condensed", "Arial Narrow", sans-serif;
+  --font-display: "Sofia Sans Extra Condensed", "Sofia fallback narrow", "Sofia fallback", sans-serif;
   --text-xs: 0.75rem;
   --leading-xs: 1rem;
   --weight-xs: 500;

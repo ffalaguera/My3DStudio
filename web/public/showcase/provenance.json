@@ -7,35 +7,49 @@
       "prompt": "Un dragón pequeño posado sobre una roca, figura de miniatura para juego de rol de mesa, muy detallado",
       "engine": "fal:fal-ai/trellis-2",
       "bytes": 2167768,
-      "seconds": 40
+      "seconds": 40,
+      "servedBytes": 509536
     },
     {
       "slug": "buho",
       "prompt": "Un búho decorativo de cerámica sentado, con plumas talladas",
       "engine": "fal:fal-ai/trellis-2",
       "bytes": 1172640,
-      "seconds": 54
+      "seconds": 54,
+      "servedBytes": 244736
     },
     {
       "slug": "estacion",
       "prompt": "Una pequeña estación de tren rural de piedra y madera para maqueta de tren de jardín",
       "engine": "fal:fal-ai/trellis-2",
       "bytes": 1829028,
-      "seconds": 103
+      "seconds": 103,
+      "servedBytes": 371292
     },
     {
       "slug": "caballo",
       "prompt": "La pieza de ajedrez del caballo con armadura medieval, sobre peana redonda",
       "engine": "fal:fal-ai/trellis-2",
       "bytes": 1891024,
-      "seconds": 73
+      "seconds": 73,
+      "servedBytes": 439388
     },
     {
       "slug": "maceta",
       "prompt": "Una maceta geométrica facetada con una suculenta dentro",
       "engine": "fal:fal-ai/trellis-2",
       "bytes": 2227480,
-      "seconds": 90
+      "seconds": 90,
+      "servedBytes": 462444
     }
-  ]
+  ],
+  "postprocess": {
+    "date": "2026-11-26",
+    "tool": "@gltf-transform/cli 4.5.1",
+    "steps": [
+      "resize texturas a 1024x1024 (WebP)",
+      "meshopt (EXT_meshopt_compression + KHR_mesh_quantization), sin simplificar la malla"
+    ],
+    "note": "bytes de cada item = tamaño original de fal; servido = servedBytes"
+  }
 }

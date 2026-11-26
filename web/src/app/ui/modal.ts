@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, 
 import { Icon } from './icon';
 
 let seq = 0;
+const supportsClosedBy = typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype;
 
 /** Modal sobre <dialog> nativo: foco atrapado, Esc cierra, el foco vuelve al disparador. */
 @Component({
@@ -9,7 +10,7 @@ let seq = 0;
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog #dlg [attr.aria-labelledby]="titleId"
+    <dialog #dlg [attr.aria-labelledby]="titleId" closedby="any"
       class="m-auto w-[calc(100%-2rem)] rounded-xl bg-surface-2 text-text shadow-pop p-0 backdrop:bg-overlay/60"
       [class.max-w-sm]="size() === 'sm'" [class.max-w-lg]="size() === 'md'"
       (close)="closed.emit()" (click)="onBackdrop($event)">
@@ -43,7 +44,16 @@ export class Modal {
     this.dlg().nativeElement.close();
   }
 
+  /**
+   * Cerrar al pulsar fuera lo hace closedby="any" (modern-web-guidance: light-dismiss-a-dialog).
+   * Respaldo para navegadores sin closedBy (Safari): solo si el clic cae fuera de la caja del diálogo.
+   */
   protected onBackdrop(e: MouseEvent): void {
-    if (e.target === this.dlg().nativeElement) this.close();
+    if (supportsClosedBy) return;
+    const d = this.dlg().nativeElement;
+    if (e.target !== d) return;
+    const r = d.getBoundingClientRect();
+    const inside = r.top <= e.clientY && e.clientY <= r.bottom && r.left <= e.clientX && e.clientX <= r.right;
+    if (!inside) this.close();
   }
 }

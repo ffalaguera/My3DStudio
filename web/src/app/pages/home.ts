@@ -39,17 +39,28 @@ const SHOWCASE = [
 
         <!-- El modelo, girando sobre su peana (en móvil, justo bajo el titular) -->
         <div class="min-w-0 lg:col-start-6 lg:col-span-7 lg:row-start-1 lg:row-span-2 flex flex-col gap-3">
-          <app-painting-viewer class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)]"
-            [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="viewStep()" />
-          <div class="flex flex-col gap-2">
-            <p id="examples-label" class="text-xs font-semibold">Modelos reales, hechos con My3DStudio a partir de una frase:</p>
-            <div role="radiogroup" aria-labelledby="examples-label" class="flex sm:flex-wrap gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1">
+          <!-- three.js (525 KB) y el modelo (250-510 KB con meshopt) no compiten con el titular (LCP): se cargan cuando la página está libre.
+               El hueco tiene la misma altura que el visor para que no haya saltos. -->
+          @defer (on idle) {
+            <app-painting-viewer class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)]"
+              [url]="'/showcase/' + example().slug + '.glb'" [name]="example().name" [source]="example().prompt" [step]="viewStep()" />
+          } @placeholder {
+            <div class="h-[16.5rem] sm:h-[30rem] lg:h-[min(68svh,38rem)] grid place-items-center" aria-hidden="true">
+              <span class="w-40 h-40 rounded-full bg-primer-deep/60"></span>
+            </div>
+          }
+          <!-- Radios nativos: una sola parada de tabulador y flechas para cambiar de ejemplo (antes, cinco paradas) -->
+          <fieldset class="min-w-0">
+            <legend class="text-xs font-semibold mb-2">Modelos reales, hechos con My3DStudio a partir de una frase:</legend>
+            <div class="flex sm:flex-wrap gap-2 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 py-1">
               @for (e of examples; track e.slug) {
-                <button type="button" role="radio" [attr.aria-checked]="example().slug === e.slug" (click)="example.set(e)"
-                  class="h-8 px-3 shrink-0 rounded-pill border-2 border-ink text-xs font-semibold aria-checked:bg-ink aria-checked:text-bone hover:bg-ink/10">{{ e.name }}</button>
+                <label class="focus-ring-within relative h-8 px-3 shrink-0 inline-flex items-center cursor-pointer rounded-pill border-2 border-ink text-xs font-semibold hover:bg-ink/10 has-[:checked]:bg-ink has-[:checked]:text-bone">
+                  <input type="radio" name="showcase-example" class="sr-only" [value]="e.slug" [checked]="example().slug === e.slug" (change)="example.set(e)" />
+                  {{ e.name }}
+                </label>
               }
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <div class="lg:col-span-5 lg:row-start-2 flex flex-col gap-6">
@@ -81,7 +92,7 @@ const SHOWCASE = [
               @if (error()) { <p id="drop-error" class="text-xs font-semibold text-lid-red bg-bone px-2 py-1 self-start" role="alert">{{ error() }}</p> }
               <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <button type="button" class="btn btn-primary btn-lg" (click)="go()">Crear mi figura · gratis</button>
-                <a routerLink="/crear" [queryParams]="{ serie: series() }" class="text-sm font-semibold underline">o descríbelo con palabras</a>
+                <a routerLink="/crear" [queryParams]="{ serie: series() }" class="text-sm font-semibold underline inline-block py-[3px] -my-[3px]">o descríbelo con palabras</a>
               </div>
             </div>
           </div>

@@ -18,7 +18,7 @@ import { Toasts } from '../../ui/toast';
           <legend class="text-sm mb-2">Tamaño</legend>
           <div class="grid grid-cols-3 gap-2">
             @for (s of c.sizes; track s.id) {
-              <label class="flex flex-col items-center gap-1 p-3 rounded-md border cursor-pointer text-center"
+              <label class="flex flex-col items-center gap-1 p-3 rounded-md border cursor-pointer text-center focus-ring-within"
                 [class.border-highlight]="size() === s.id" [class.bg-highlight-surface]="size() === s.id" [class.border-border]="size() !== s.id">
                 <input type="radio" name="size" class="sr-only" [value]="s.id" [checked]="size() === s.id" (change)="size.set(s.id)" />
                 <span class="text-sm font-semibold">{{ s.name }}</span>

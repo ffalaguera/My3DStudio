@@ -31,10 +31,10 @@ type Chip = 'all' | 'hd' | 'smart' | 'textured' | 'untextured';
             </p>
           }
         </div>
-        <label class="flex items-center gap-2 h-10 px-3 field w-full sm:w-72">
+        <label class="flex items-center gap-2 h-10 px-3 field w-full sm:w-72 focus-ring-within">
           <ui-icon name="search" class="text-text-muted" />
           <span class="sr-only">Buscar en tus modelos</span>
-          <input class="bg-transparent outline-none flex-1 text-sm placeholder:text-text-muted" placeholder="Busca por nombre"
+          <input class="bg-transparent outline-none flex-1 self-stretch text-sm placeholder:text-text-muted" placeholder="Busca por nombre"
             [ngModel]="q()" (ngModelChange)="q.set($event)" />
           @if (q()) { <button type="button" class="btn btn-icon h-6 w-6" aria-label="Borrar búsqueda" (click)="q.set('')"><ui-icon name="x" [size]="14" /></button> }
         </label>

@@ -3,10 +3,13 @@ import {
 } from '@angular/core';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Icon } from '../../ui/icon';
 import { frame } from '../../data/fake-model';
 
+let viewerSeq = 0;
+type Nudge = 'left' | 'right' | 'up' | 'down' | 'in' | 'out';
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgl';
 
 /** Viewer3D de components.md: carga un GLB por URL (igual con la API falsa y la real). */
@@ -18,8 +21,9 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgl';
   template: `
     <!-- BUG-003: solo se puede enfocar cuando hay un modelo; antes era enfocable estando oculto -->
     <div #mount class="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-      [attr.tabindex]="state() === 'ready' ? 0 : null" [attr.role]="state() === 'ready' ? 'img' : null"
-      [attr.aria-label]="state() === 'ready' ? 'Modelo 3D: ' + name() + '. Flechas para girar, + y - para acercar, 0 para reiniciar' : null"
+      [attr.tabindex]="state() === 'ready' ? 0 : null" [attr.role]="state() === 'ready' ? 'group' : null"
+      [attr.aria-roledescription]="state() === 'ready' ? 'visor 3D' : null"
+      [attr.aria-label]="state() === 'ready' ? 'Modelo 3D: ' + name() : null" [attr.aria-describedby]="state() === 'ready' ? helpId : null"
       [attr.aria-hidden]="state() === 'ready' ? null : 'true'"
       (keydown)="keys($event)"></div>
 
@@ -46,7 +50,15 @@ type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgl';
         <button type="button" class="btn btn-icon" [attr.aria-pressed]="wire()" (click)="toggleWire()" aria-label="Ver malla"><ui-icon name="grid-3x3" /></button>
         <button type="button" class="btn btn-icon" [attr.aria-pressed]="grid()" (click)="toggleGrid()" aria-label="Mostrar suelo"><ui-icon name="square-dashed" /></button>
         <button type="button" class="btn btn-icon" (click)="snapshot()" aria-label="Guardar captura PNG"><ui-icon name="camera" /></button>
-        <button type="button" class="btn btn-icon" (click)="reset()" aria-label="Reiniciar vista"><ui-icon name="rotate-ccw" /></button>
+      </div>
+      <p [id]="helpId" class="sr-only">Gíralo con las flechas, acerca con + y aleja con −, 0 vuelve a la vista inicial. También con los botones del visor.</p>
+      <!-- Manejar el modelo sin arrastrar: girar, acercar y volver a la vista inicial -->
+      <div role="group" aria-label="Mover el modelo" class="absolute right-3 bottom-3 flex gap-1 p-1 rounded-pill bg-surface-2/80 backdrop-blur">
+        <button type="button" class="btn btn-icon" (click)="nudge('left')" aria-label="Girar a la izquierda"><ui-icon name="rotate-ccw" /></button>
+        <button type="button" class="btn btn-icon" (click)="nudge('right')" aria-label="Girar a la derecha"><ui-icon name="rotate-cw" /></button>
+        <button type="button" class="btn btn-icon" (click)="nudge('in')" aria-label="Acercar"><ui-icon name="zoom-in" /></button>
+        <button type="button" class="btn btn-icon" (click)="nudge('out')" aria-label="Alejar"><ui-icon name="zoom-out" /></button>
+        <button type="button" class="btn btn-icon" (click)="reset()" aria-label="Vista inicial"><ui-icon name="scan" /></button>
       </div>
       @if (statsLine()) { <p class="absolute left-3 bottom-3 text-xs text-text-muted">{{ statsLine() }}</p> }
     }
@@ -59,6 +71,7 @@ export class Viewer implements AfterViewInit, OnDestroy {
   readonly statsLine = input('');
 
   protected readonly state = signal<LoadState>('idle');
+  protected readonly helpId = `viewer-help-${++viewerSeq}`;
   protected readonly wire = signal(false);
   protected readonly grid = signal(false);
   protected readonly bright = signal(false);
@@ -74,6 +87,9 @@ export class Viewer implements AfterViewInit, OnDestroy {
   private readonly key = new THREE.DirectionalLight(0xffffff, 2.2);
   private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x202020, 1.4);
   private resize?: ResizeObserver;
+  private visibility?: IntersectionObserver;
+  /** La escena cambió sin mover la cámara (modelo nuevo, malla, luz, suelo, tamaño): hay que redibujar. */
+  private dirty = true;
   private raf = 0;
   private loadSeq = 0;
 
@@ -104,19 +120,30 @@ export class Viewer implements AfterViewInit, OnDestroy {
     this.resize = new ResizeObserver(() => this.fit());
     this.resize.observe(el);
     this.fit();
+    // Dibuja solo cuando algo cambia (la cámara se mueve o la escena se marca como sucia) y solo mientras se ve.
     this.zone.runOutsideAngular(() => {
       const loop = () => {
         this.raf = requestAnimationFrame(loop);
-        this.controls?.update();
+        const moved = this.controls?.update() ?? false;
+        if (!moved && !this.dirty) return;
+        this.dirty = false;
         this.renderer?.render(this.scene, this.camera);
       };
-      loop();
+      this.visibility = new IntersectionObserver(([entry]) => {
+        cancelAnimationFrame(this.raf);
+        if (entry?.isIntersecting) {
+          this.dirty = true;
+          loop();
+        }
+      });
+      this.visibility.observe(el);
     });
     void this.load(this.url());
   }
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.raf);
+    this.visibility?.disconnect();
     this.resize?.disconnect();
     this.controls?.dispose();
     this.clear();
@@ -130,6 +157,7 @@ export class Viewer implements AfterViewInit, OnDestroy {
     if (this.renderer) Object.assign(this.renderer.domElement.style, { width: '100%', height: '100%', display: 'block' });
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.dirty = true;
   }
 
   private clear(): void {
@@ -154,7 +182,7 @@ export class Viewer implements AfterViewInit, OnDestroy {
     }
     this.state.set('loading');
     try {
-      const gltf = await new GLTFLoader().loadAsync(url);
+      const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);
       if (seq !== this.loadSeq) return;
       this.model = gltf.scene;
       this.scene.add(this.model);
@@ -173,6 +201,7 @@ export class Viewer implements AfterViewInit, OnDestroy {
     frame(this.camera, this.model);
     const c = new THREE.Box3().setFromObject(this.model).getCenter(new THREE.Vector3());
     this.controls?.target.copy(c);
+    this.dirty = true;
   }
 
   protected toggleWire(): void {
@@ -185,21 +214,26 @@ export class Viewer implements AfterViewInit, OnDestroy {
       const m = o as THREE.Mesh;
       if (m.isMesh) (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => ((x as THREE.MeshStandardMaterial).wireframe = this.wire()));
     });
+    this.dirty = true;
   }
 
   protected toggleGrid(): void {
     this.grid.update((v) => !v);
     this.gridHelper.visible = this.grid();
+    this.dirty = true;
   }
 
   protected toggleLight(): void {
     this.bright.update((v) => !v);
     this.hemi.intensity = this.bright() ? 2.6 : 1.4;
     this.key.intensity = this.bright() ? 3.2 : 2.2;
+    this.dirty = true;
   }
 
   protected snapshot(): void {
     if (!this.renderer) return;
+    // sin dibujo continuo el lienzo puede estar vacío: se dibuja justo antes de leerlo
+    this.renderer.render(this.scene, this.camera);
     const a = document.createElement('a');
     a.href = this.renderer.domElement.toDataURL('image/png');
     a.download = `${this.name() || 'modelo'}.png`;
@@ -207,20 +241,25 @@ export class Viewer implements AfterViewInit, OnDestroy {
   }
 
   protected keys(e: KeyboardEvent): void {
+    const map: Record<string, Nudge> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', '+': 'in', '=': 'in', '-': 'out' };
+    if (e.key === '0') return void (this.reset(), e.preventDefault());
+    const n = map[e.key];
+    if (!n) return;
+    e.preventDefault();
+    this.nudge(n);
+  }
+
+  /** Un paso de cámara: lo usan el teclado y los botones del visor. */
+  protected nudge(n: Nudge): void {
     if (!this.controls || !this.model) return;
     const target = this.controls.target;
     const offset = this.camera.position.clone().sub(target);
     const step = Math.PI / 18;
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), e.key === 'ArrowLeft' ? -step : step);
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    if (n === 'left' || n === 'right') offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), n === 'left' ? -step : step);
+    else if (n === 'up' || n === 'down') {
       const axis = new THREE.Vector3().crossVectors(offset, this.camera.up).normalize();
-      offset.applyAxisAngle(axis, e.key === 'ArrowUp' ? step : -step);
-    } else if (e.key === '+' || e.key === '=') offset.multiplyScalar(0.9);
-    else if (e.key === '-') offset.multiplyScalar(1.1);
-    else if (e.key === '0') return void (this.reset(), e.preventDefault());
-    else return;
-    e.preventDefault();
+      offset.applyAxisAngle(axis, n === 'up' ? step : -step);
+    } else offset.multiplyScalar(n === 'in' ? 0.9 : 1.1);
     this.camera.position.copy(target).add(offset);
   }
 }

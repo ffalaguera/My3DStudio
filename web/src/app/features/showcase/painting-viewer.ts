@@ -1,10 +1,14 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnDestroy, effect, inject, input, signal, viewChild,
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, NgZone, OnDestroy, computed, effect, inject, input, signal, viewChild,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { Icon } from '../../ui/icon';
+
+let viewerSeq = 0;
 
 /** Los cuatro botes de la guía: cada uno repinta el mismo modelo. */
 export type PaintStep = 'foto' | 'malla' | 'textura' | 'archivo';
@@ -17,13 +21,26 @@ interface Facts { faces: number; w: number; h: number; d: number }
  */
 @Component({
   selector: 'app-painting-viewer',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'relative block select-none' },
   template: `
-    <div #mount class="absolute inset-0 cursor-grab active:cursor-grabbing" tabindex="0" role="img"
-      [attr.aria-label]="'Modelo de ejemplo: ' + name() + '. Arrastra o usa las flechas para girarlo.'"
+    <!-- Un visor que se maneja no es una imagen: grupo con nombre, descripción del modelo y controles visibles -->
+    <div #mount class="absolute inset-0 cursor-grab active:cursor-grabbing" tabindex="0" role="group"
+      aria-roledescription="visor 3D" [attr.aria-label]="'Modelo de ejemplo: ' + name()" [attr.aria-describedby]="descId"
       (keydown)="keys($event)"></div>
+    <p [id]="descId" class="sr-only">{{ description() }}</p>
+
+    @if (state() === 'ready') {
+      <div role="group" aria-label="Controles del modelo"
+        class="absolute right-2 bottom-2 z-10 flex gap-1 p-1 rounded-pill bg-bone/90 text-ink shadow-[0_4px_12px_rgb(0_0_0/0.2)]">
+        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Girar a la izquierda" (click)="rotate(-1)"><ui-icon name="rotate-ccw" /></button>
+        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Girar a la derecha" (click)="rotate(1)"><ui-icon name="rotate-cw" /></button>
+        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" [attr.aria-pressed]="spinning()"
+          aria-label="Giro automático" (click)="toggleSpin()"><ui-icon [name]="spinning() ? 'pause' : 'play'" /></button>
+        <button type="button" class="btn btn-icon text-ink hover:bg-ink/10" aria-label="Vista inicial" (click)="resetView()"><ui-icon name="scan" /></button>
+      </div>
+    }
 
     @if (state() === 'loading') {
       <div class="absolute inset-0 grid place-items-center pointer-events-none">
@@ -71,6 +88,16 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
 
   protected readonly state = signal<'loading' | 'ready' | 'error' | 'no-webgl'>('loading');
   protected readonly facts = signal<Facts | null>(null);
+  protected readonly descId = `painting-viewer-desc-${++viewerSeq}`;
+  /** Giro automático: contenido en movimiento más de 5 s, así que se puede pausar (WCAG 2.2.2). */
+  protected readonly spinning = signal(!matchMedia('(prefers-reduced-motion: reduce)').matches);
+  /** Texto alternativo del modelo para quien no puede verlo ni manejarlo. */
+  protected readonly description = computed(() => {
+    const f = this.facts();
+    const from = this.source() ? `Generado a partir de la frase «${this.source()}». ` : '';
+    const size = f ? `Impreso mide ${Math.round(f.h)} mm de alto, ${Math.round(f.w)} × ${Math.round(f.d)} mm de base y tiene ${f.faces.toLocaleString('es')} polígonos. ` : '';
+    return `${from}${size}Gíralo con las flechas izquierda y derecha o con los botones del visor.`;
+  });
 
   private readonly zone = inject(NgZone);
   private readonly mount = viewChild.required<ElementRef<HTMLDivElement>>('mount');
@@ -87,6 +114,9 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   private readonly silhouette = new THREE.MeshBasicMaterial({ color: 0x1c1b1a });
   private anchors: THREE.Vector3[] = [];
   private resize?: ResizeObserver;
+  private visibility?: IntersectionObserver;
+  /** La escena cambió sin mover la cámara (modelo, pintura, tamaño): hay que redibujar. */
+  private dirty = true;
   private raf = 0;
   private idleTimer = 0;
   private seq = 0;
@@ -127,7 +157,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     Object.assign(this.controls, {
       enableDamping: true, dampingFactor: 0.06, enableZoom: false, enablePan: false, rotateSpeed: 0.7,
-      minPolarAngle: Math.PI * 0.18, maxPolarAngle: Math.PI * 0.52, autoRotate: !this.reduced, autoRotateSpeed: 1.1,
+      minPolarAngle: Math.PI * 0.18, maxPolarAngle: Math.PI * 0.52, autoRotate: this.spinning(), autoRotateSpeed: 1.1,
     });
     // al soltarlo sigue girando con su inercia; a los 3 s vuelve el giro lento
     this.controls.addEventListener('start', () => {
@@ -135,26 +165,37 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
       clearTimeout(this.idleTimer);
     });
     this.controls.addEventListener('end', () => {
-      if (!this.reduced) this.idleTimer = window.setTimeout(() => (this.controls!.autoRotate = true), 3000);
+      if (this.spinning()) this.idleTimer = window.setTimeout(() => (this.controls!.autoRotate = true), 3000);
     });
 
     this.resize = new ResizeObserver(() => this.fit());
     this.resize.observe(el);
     this.fit();
+    // Dibuja solo cuando algo cambia (giro, arrastre, inercia o escena marcada) y solo mientras se ve en pantalla.
     this.zone.runOutsideAngular(() => {
       const loop = () => {
         this.raf = requestAnimationFrame(loop);
-        this.controls?.update();
+        const moved = this.controls?.update() ?? false;
+        if (!moved && !this.dirty) return;
+        this.dirty = false;
         this.renderer?.render(this.scene, this.camera);
         this.drawLeaders();
       };
-      loop();
+      this.visibility = new IntersectionObserver(([entry]) => {
+        cancelAnimationFrame(this.raf);
+        if (entry?.isIntersecting) {
+          this.dirty = true;
+          loop();
+        }
+      });
+      this.visibility.observe(el);
     });
     void this.load(this.url());
   }
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.raf);
+    this.visibility?.disconnect();
     clearTimeout(this.idleTimer);
     clearTimeout(this.entryTimer);
     this.resize?.disconnect();
@@ -172,6 +213,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     if (this.renderer) Object.assign(this.renderer.domElement.style, { width: '100%', height: '100%', display: 'block' });
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.dirty = true;
   }
 
   private clear(): void {
@@ -194,7 +236,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     const seq = ++this.seq;
     this.state.set('loading');
     try {
-      const gltf = await new GLTFLoader().loadAsync(url);
+      const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url);
       if (seq !== this.seq) return;
       this.clear();
       const model = gltf.scene;
@@ -255,6 +297,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     this.camera.near = 0.05;
     this.camera.far = 50;
     this.camera.updateProjectionMatrix();
+    this.dirty = true;
   }
 
   /** Repinta el modelo según el bote elegido. */
@@ -262,6 +305,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     for (const [mesh, original] of this.originals) {
       mesh.material = step === 'malla' ? this.primer : step === 'foto' ? this.silhouette : original;
     }
+    this.dirty = true;
   }
 
   /** Líneas guía del paso «Archivo»: del punto del modelo a su etiqueta, recalculadas en cada fotograma. */
@@ -287,13 +331,32 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   }
 
   protected keys(e: KeyboardEvent): void {
-    if (!this.controls) return;
-    const step = Math.PI / 16;
-    const offset = this.camera.position.clone().sub(this.controls.target);
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), e.key === 'ArrowLeft' ? -step : step);
-    else return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault();
-    this.controls.autoRotate = false;
+    this.rotate(e.key === 'ArrowLeft' ? -1 : 1);
+  }
+
+  /** Gira un dieciseisavo de vuelta. Pausa el giro automático: quien gira a mano quiere mirar un punto. */
+  protected rotate(dir: -1 | 1): void {
+    if (!this.controls) return;
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), dir * (Math.PI / 16));
     this.camera.position.copy(this.controls.target).add(offset);
+    this.setSpin(false);
+  }
+
+  protected toggleSpin(): void {
+    this.setSpin(!this.spinning());
+  }
+
+  protected resetView(): void {
+    this.frame();
+    this.controls?.update();
+  }
+
+  private setSpin(on: boolean): void {
+    this.spinning.set(on);
+    clearTimeout(this.idleTimer);
+    if (this.controls) this.controls.autoRotate = on;
   }
 }

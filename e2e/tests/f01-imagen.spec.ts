@@ -16,7 +16,7 @@ test.describe('F01 imagen → modelo 3D', () => {
     await waitForModel(page);
     const result = page.getByRole('region', { name: 'Resultado' });
     await expect(result.getByRole('heading', { name: 'jarron' })).toBeVisible();
-    await expect(result.getByRole('img', { name: /Modelo 3D: jarron/ })).toBeVisible();
+    await expect(result.getByRole('group', { name: /Modelo 3D: jarron/ })).toBeVisible();
     expect(await a11y(page), 'axe S05').toEqual([]);
 
     await expect(result.getByRole('button', { name: 'Exportar' })).toHaveCount(0);

@@ -23,7 +23,7 @@ interface FormatOption { id: ExportFormat; label: string; use: string }
       <fieldset class="flex flex-col gap-2">
         <legend class="text-sm mb-2">Formato</legend>
         @for (f of formats; track f.id) {
-          <label class="flex items-center gap-3 p-3 rounded-md border cursor-pointer"
+          <label class="flex items-center gap-3 p-3 rounded-md border cursor-pointer focus-ring-within"
             [class.border-highlight]="format() === f.id" [class.bg-highlight-surface]="format() === f.id"
             [class.border-border]="format() !== f.id" [class.opacity-50]="!ready(f.id)" [class.cursor-not-allowed]="!ready(f.id)">
             <input type="radio" name="format" class="sr-only" [value]="f.id" [checked]="format() === f.id"

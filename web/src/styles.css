@@ -21,6 +21,22 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Respaldo calibrado para los titulares (modern-web-guidance: visually-stable-font-fallbacks).
+   Sofia es muy estrecha: sin calibrar, en Android/iOS el titular pasaba de 2 a 3 líneas al llegar la fuente
+   (40 px de salto). size-adjust escala la fuente local para que ocupe el mismo ancho que Sofia
+   (medido con el texto real en mayúsculas, peso 800): 73,2 % de Arial Narrow y 53,4 % de Arial/Helvetica/Roboto.
+   La altura de línea de los titulares es fija, así que con el mismo ancho no se mueve nada. */
+@font-face {
+  font-family: "Sofia fallback narrow";
+  src: local("Arial Narrow"), local("ArialNarrow"), local("ArialNarrow-Bold");
+  size-adjust: 73.2%;
+}
+@font-face {
+  font-family: "Sofia fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto"), local("Roboto-Regular"), local("Liberation Sans");
+  size-adjust: 53.4%;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,6 +51,40 @@
   /* Lo que el navegador pinta por su cuenta también lleva el mundo */
   ::selection { background: rgb(var(--color-lid-mustard)); color: rgb(var(--color-ink)); }
   :focus-visible { outline: 2px solid rgb(var(--color-focus)); outline-offset: 2px; }
+  /* Controles ocultos o sin borde propio (radios sr-only, el input del buscador): el contorno de foco
+     se pinta en su contenedor visible, el mismo que el global. */
+  .focus-ring-within:has(:focus-visible) { outline: 2px solid rgb(var(--color-focus)); outline-offset: 2px; }
+  /* El titular recibe el foco al cambiar de página (app.ts) solo para situar al lector: no es un control */
+  h1[tabindex="-1"]:focus { outline: none; }
+
+  /* Desplegables de la barra: popover nativo anclado a su botón (modern-web-guidance: navbar).
+     Sin popover nativo los oculta el polyfill hasta abrirlos; sin anchor() se usa la declaración anterior. */
+  .nav-anchor-create { anchor-name: --nav-create; }
+  .nav-anchor-site { anchor-name: --nav-site; }
+  .nav-popover { position: fixed; inset: auto; margin: 0; }
+  .nav-popover-create {
+    position-anchor: --nav-create;
+    top: anchor(bottom);
+    left: anchor(left);
+    margin-block-start: 0.5rem;
+    position-try-fallbacks: flip-block;
+  }
+  .nav-popover-site {
+    inset-block-start: 4.75rem; /* reserva: navegadores sin anchor() */
+    inset-block-start: anchor(--nav-site bottom);
+    inset-inline-end: 0.75rem;
+    inline-size: min(80dvw, 20rem);
+    max-block-size: calc(100dvh - 6rem);
+    margin-block-start: 0.5rem;
+    overflow: auto;
+  }
+  @supports not selector(:popover-open) {
+    [popover]:not(.\:popover-open) { display: none; }
+  }
+  /* Con un modal abierto la página de debajo no se desplaza, sin tocar el overflow de <html> ni <body>
+     (modern-web-guidance: prevent-page-scroll-under-modal-dialog) */
+  dialog:modal { overscroll-behavior: contain; }
+  dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
   html { scrollbar-color: rgb(var(--color-surface-3)) rgb(var(--color-bg)); accent-color: rgb(var(--color-accent)); }
   a { text-underline-offset: 0.2em; }
   input, textarea { caret-color: rgb(var(--color-focus)); }
@@ -55,7 +105,7 @@
   .btn-icon { @apply h-8 w-8 p-0 rounded-pill text-text hover:bg-surface-3; }
 
   .field { @apply rounded-md bg-surface border border-border-input text-sm text-text placeholder:text-text-muted
-           focus:border-focus focus:outline-none; }
+           focus:border-focus; }
   .field[aria-invalid="true"] { @apply border-danger; }
   .label { @apply flex flex-col gap-1 text-sm; }
   .hint { @apply text-xs text-text-muted; }
@@ -69,6 +119,26 @@
   .chip { @apply inline-flex items-center gap-1 h-8 px-3 rounded-pill border border-border text-xs font-medium text-text-muted
           hover:text-text; }
   .chip[aria-pressed="true"], .chip[aria-checked="true"] { @apply border-highlight bg-highlight-surface text-text; }
+
+  /* Barra de progreso nativa con el aspecto de siempre: pista surface-3, relleno highlight, extremos redondos.
+     Las reglas -webkit- y -moz- van separadas: agrupadas, el navegador descarta la regla entera. */
+  .progress-bar {
+    appearance: none;
+    border: 0 solid;
+    overflow: clip;
+    border-radius: 9999px;
+    background: rgb(var(--color-surface-3));
+  }
+  .progress-bar::-webkit-progress-bar { background: transparent; }
+  .progress-bar::-webkit-progress-value {
+    background: rgb(var(--color-highlight));
+    border-radius: 9999px;
+    transition: inline-size var(--motion-base, 200ms) ease-out;
+  }
+  .progress-bar::-moz-progress-bar {
+    background: rgb(var(--color-highlight));
+    border-radius: 9999px;
+  }
 
   .badge { @apply inline-flex items-center h-6 px-2 rounded-pill bg-surface-3 text-xs font-medium text-text-muted; }
 
