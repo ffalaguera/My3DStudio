@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Icon } from '../../ui/icon';
 import { frame } from '../../data/fake-model';
 
@@ -69,6 +70,8 @@ export class Viewer implements AfterViewInit, OnDestroy {
   readonly url = input<string | null>(null);
   readonly name = input('');
   readonly statsLine = input('');
+  /** Color plano para previsualizar la figura impresa (un solo color). null = textura original. */
+  readonly color = input<string | null>(null);
 
   protected readonly state = signal<LoadState>('idle');
   protected readonly helpId = `viewer-help-${++viewerSeq}`;
@@ -88,6 +91,10 @@ export class Viewer implements AfterViewInit, OnDestroy {
   private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x202020, 1.4);
   private resize?: ResizeObserver;
   private visibility?: IntersectionObserver;
+  private env?: THREE.Texture;
+  /** Material plano reutilizable para la vista de color, y los materiales originales de cada malla. */
+  private colorMat?: THREE.MeshStandardMaterial;
+  private readonly originals = new WeakMap<THREE.Mesh, THREE.Material | THREE.Material[]>();
   /** La escena cambió sin mover la cámara (modelo nuevo, malla, luz, suelo, tamaño): hay que redibujar. */
   private dirty = true;
   private raf = 0;
@@ -97,6 +104,11 @@ export class Viewer implements AfterViewInit, OnDestroy {
     effect(() => {
       const url = this.url();
       if (this.renderer) void this.load(url);
+    });
+    // al cambiar el color elegido, repintar el modelo ya cargado
+    effect(() => {
+      this.color();
+      if (this.renderer) this.applyColor();
     });
   }
 
@@ -111,6 +123,12 @@ export class Viewer implements AfterViewInit, OnDestroy {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(this.renderer.domElement);
+    // Entorno de estudio: los materiales PBR que devuelve el motor 3D son metálicos y, sin algo que reflejar,
+    // se ven casi negros. Un RoomEnvironment neutro les da reflejo y deja ver su color.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environment = this.env;
+    pmrem.dispose();
     this.key.position.set(3, 4, 2);
     this.scene.add(this.hemi, this.key);
     this.gridHelper.visible = false;
@@ -147,6 +165,8 @@ export class Viewer implements AfterViewInit, OnDestroy {
     this.resize?.disconnect();
     this.controls?.dispose();
     this.clear();
+    this.colorMat?.dispose();
+    this.env?.dispose();
     this.renderer?.dispose();
   }
 
@@ -165,10 +185,13 @@ export class Viewer implements AfterViewInit, OnDestroy {
     this.scene.remove(this.model);
     this.model.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.isMesh) {
-        m.geometry.dispose();
-        (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => x.dispose());
-      }
+      if (!m.isMesh) return;
+      m.geometry.dispose();
+      // el material actual puede ser el de color (compartido): ese no se desecha aquí, se reutiliza
+      const mats = new Set<THREE.Material>();
+      for (const x of [m.material, this.originals.get(m)].flat()) if (x) mats.add(x as THREE.Material);
+      mats.forEach((x) => x !== this.colorMat && x.dispose());
+      this.originals.delete(m);
     });
     this.model = undefined;
   }
@@ -188,6 +211,7 @@ export class Viewer implements AfterViewInit, OnDestroy {
       this.scene.add(this.model);
       const box = new THREE.Box3().setFromObject(this.model);
       this.gridHelper.position.y = box.min.y;
+      this.applyColor();
       this.applyWire();
       this.reset();
       this.state.set('ready');
@@ -214,6 +238,26 @@ export class Viewer implements AfterViewInit, OnDestroy {
       const m = o as THREE.Mesh;
       if (m.isMesh) (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => ((x as THREE.MeshStandardMaterial).wireframe = this.wire()));
     });
+    this.dirty = true;
+  }
+
+  /** Previsualiza la figura en un solo color (como se imprime) o vuelve a la textura original. */
+  private applyColor(): void {
+    const c = this.color();
+    this.model?.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      if (!this.originals.has(m)) this.originals.set(m, m.material);
+      if (c) {
+        // material mate de un color: así se ve como la figura impresa, sin brillos metálicos
+        this.colorMat ??= new THREE.MeshStandardMaterial({ metalness: 0, roughness: 0.65 });
+        this.colorMat.color.set(c);
+        m.material = this.colorMat;
+      } else {
+        m.material = this.originals.get(m)!;
+      }
+    });
+    this.applyWire();
     this.dirty = true;
   }
 

@@ -4,11 +4,12 @@
   <div role="tablist" aria-label="Herramientas" aria-orientation="vertical"
     class="flex lg:flex-col gap-1 p-1 rounded-lg bg-surface overflow-x-auto lg:w-rail shrink-0">
     @for (t of tools; track t.id) {
-      <button type="button" role="tab" [attr.aria-selected]="t.id === 'model'" [attr.aria-disabled]="!t.ready"
-        [attr.title]="t.ready ? null : 'Próximamente'"
-        class="relative flex flex-col items-center justify-center gap-1 min-w-16 h-14 rounded-md text-xs"
-        [class.bg-highlight-surface]="t.id === 'model'" [class.text-text]="t.id === 'model'"
-        [class.text-text-muted]="t.id !== 'model'" [class.opacity-50]="!t.ready">
+      <button type="button" role="tab" [attr.aria-selected]="t.id === activeTool()" [attr.aria-disabled]="!t.ready || null"
+        [disabled]="!t.ready" [attr.title]="t.ready ? null : 'Próximamente'" (click)="selectTool(t.id)"
+        class="relative flex flex-col items-center justify-center gap-1 min-w-16 h-14 rounded-md text-xs transition-colors duration-fast"
+        [class.bg-highlight-surface]="t.id === activeTool()" [class.text-text]="t.id === activeTool()"
+        [class.text-text-muted]="t.id !== activeTool()" [class.hover:bg-surface-3]="t.ready && t.id !== activeTool()"
+        [class.opacity-50]="!t.ready" [class.cursor-not-allowed]="!t.ready">
         <ui-icon [name]="t.icon" [size]="20" />
         {{ t.label }}
         @if (!t.ready) { <span class="sr-only">(próximamente)</span> }
@@ -183,8 +184,27 @@
     @let t = selectedTask();
     @let a = asset();
     @if (a) {
-      <app-viewer class="flex-1" [url]="a.glbUrl" [name]="a.name"
+      <app-viewer class="flex-1" [url]="a.glbUrl" [name]="a.name" [color]="modelColor()"
         [statsLine]="(a.faceCount | number: '1.0-0' : 'es') + ' caras · ' + (a.vertexCount | number: '1.0-0' : 'es') + ' vértices'" />
+
+      <!-- Panel de color (pestaña «Color»): previsualiza la figura en cada color de impresión -->
+      @if (activeTool() === 'texture') {
+        <div class="absolute left-3 top-14 w-56 panel shadow-float p-3 flex flex-col gap-3" role="group" aria-label="Color de la figura">
+          <p class="text-xs font-semibold">Color de la figura</p>
+          <p class="hint">La figura se imprime de un color. Elige cómo se vería; el azul original solo es la vista 3D.</p>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" (click)="modelColor.set(null)" [attr.aria-pressed]="modelColor() === null" title="Textura original"
+              class="w-8 h-8 rounded-full border-2 grid place-items-center" [class.border-text]="modelColor() === null" [class.border-border]="modelColor() !== null">
+              <ui-icon name="image" [size]="14" />
+            </button>
+            @for (c of printColors; track c.id) {
+              <button type="button" (click)="modelColor.set(c.hex)" [attr.aria-pressed]="modelColor() === c.hex" [title]="c.name"
+                class="w-8 h-8 rounded-full border-2" [style.background]="c.hex"
+                [class.border-text]="modelColor() === c.hex" [class.border-border]="modelColor() !== c.hex"></button>
+            }
+          </div>
+        </div>
+      }
       <div class="absolute left-3 top-3 right-16 flex flex-wrap items-center gap-2">
         @if (renaming()) {
           <form class="flex gap-2" (ngSubmit)="saveName(a)">

@@ -17,11 +17,21 @@ import { Handoff } from './handoff';
 
 const TOOLS = [
   { id: 'model', label: 'Modelo', icon: 'box', ready: true },
+  { id: 'texture', label: 'Color', icon: 'paintbrush', ready: true },
   { id: 'segment', label: 'Piezas', icon: 'puzzle', ready: false },
   { id: 'retopo', label: 'Retopo', icon: 'grid-3x3', ready: false },
   { id: 'uv', label: 'UV', icon: 'scan', ready: false },
-  { id: 'texture', label: 'Textura', icon: 'paintbrush', ready: false },
   { id: 'rig', label: 'Rig', icon: 'person-standing', ready: false },
+];
+
+/** Colores de filamento de la tienda (lib/shop.ts): para previsualizar la figura en el visor. */
+const PRINT_COLORS = [
+  { id: 'gris', name: 'Gris imprimación', hex: '#8a8d8f' },
+  { id: 'hueso', name: 'Hueso', hex: '#e9e3d3' },
+  { id: 'negro', name: 'Negro', hex: '#1c1b1a' },
+  { id: 'rojo', name: 'Rojo', hex: '#b3262d' },
+  { id: 'azul', name: 'Azul', hex: '#2f5ea8' },
+  { id: 'verde', name: 'Verde', hex: '#3e7a4f' },
 ];
 
 /** S03 configurar, S04 generando, S05 resultado. Ruta /crear?serie=hd|smart&modelo=<id>&tarea=<id> */
@@ -41,7 +51,16 @@ export class Workspace {
   private readonly handoff = inject(Handoff);
 
   protected readonly tools = TOOLS;
+  protected readonly printColors = PRINT_COLORS;
+  /** Herramienta del carril izquierdo activa. */
+  protected readonly activeTool = signal('model');
+  /** Color plano para previsualizar la figura; null = textura original del modelo. */
+  protected readonly modelColor = signal<string | null>(null);
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
+
+  protected selectTool(id: string): void {
+    if (TOOLS.find((t) => t.id === id)?.ready) this.activeTool.set(id);
+  }
 
   // ---------------------------------------------------------------- formulario
   protected readonly series = signal<Series>('hd');

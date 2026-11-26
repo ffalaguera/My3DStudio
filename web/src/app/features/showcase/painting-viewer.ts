@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 let viewerSeq = 0;
 
@@ -100,6 +101,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   private anchors: THREE.Vector3[] = [];
   private resize?: ResizeObserver;
   private visibility?: IntersectionObserver;
+  private env?: THREE.Texture;
   /** La escena cambió sin mover la cámara (modelo, pintura, tamaño): hay que redibujar. */
   private dirty = true;
   private raf = 0;
@@ -127,6 +129,11 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(this.renderer.domElement);
+    // Entorno de estudio: los materiales PBR metálicos del motor 3D necesitan algo que reflejar; sin esto se ven casi negros.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environment = this.env;
+    pmrem.dispose();
 
     const key = new THREE.DirectionalLight(0xfff6e6, 2.6);
     key.position.set(2.5, 5, 3);
@@ -182,6 +189,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     this.controls?.dispose();
     this.clear();
     this.primer.dispose();
+    this.env?.dispose();
     this.renderer?.dispose();
   }
 
