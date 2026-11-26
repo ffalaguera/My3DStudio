@@ -105,10 +105,6 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
   private raf = 0;
   private idleTimer = 0;
   private seq = 0;
-  private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  /** Entrada: el primer modelo aparece en imprimación y se pinta. Solo una vez por página. */
-  private entered = false;
-  private entryTimer = 0;
 
   constructor() {
     effect(() => {
@@ -182,7 +178,6 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
     cancelAnimationFrame(this.raf);
     this.visibility?.disconnect();
     clearTimeout(this.idleTimer);
-    clearTimeout(this.entryTimer);
     this.resize?.disconnect();
     this.controls?.dispose();
     this.clear();
@@ -255,16 +250,8 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
       // anclas de las líneas guía: cima, costado y peana
       this.anchors = [new THREE.Vector3(0, 1, 0), new THREE.Vector3(w / 2, 0.45, 0), new THREE.Vector3(0, 0.25, d / 2)];
       this.frame();
-      if (!this.entered && !this.reduced) {
-        // la entrada de la portada: el modelo sale en gris imprimación y a los 600 ms se pinta
-        this.entered = true;
-        this.paint('malla');
-        clearTimeout(this.entryTimer);
-        this.entryTimer = window.setTimeout(() => this.paint(this.step()), 650);
-      } else {
-        this.entered = true;
-        this.paint(this.step());
-      }
+      // sale directamente en su paso, sin pasar antes por gris
+      this.paint(this.step());
       this.state.set('ready');
     } catch (err) {
       if (seq !== this.seq) return;
