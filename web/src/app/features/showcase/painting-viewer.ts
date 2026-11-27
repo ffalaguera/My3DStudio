@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { neutralizeMetalness } from '../../data/materials';
 
 let viewerSeq = 0;
 
@@ -227,6 +228,7 @@ export class PaintingViewer implements AfterViewInit, OnDestroy {
       if (seq !== this.seq) return;
       this.clear();
       const model = gltf.scene;
+      neutralizeMetalness(model);
       // normaliza: 1 unidad de alto, apoyado en y = 0 y centrado
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());

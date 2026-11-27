@@ -54,8 +54,11 @@ export class Workspace {
   protected readonly printColors = PRINT_COLORS;
   /** Herramienta del carril izquierdo activa. */
   protected readonly activeTool = signal('model');
-  /** Color plano para previsualizar la figura; null = textura original del modelo. */
-  protected readonly modelColor = signal<string | null>(null);
+  // Pintura por zonas (pestaña «Color»)
+  protected readonly activeColor = signal('#2f5ea8');
+  protected readonly paintTool = signal<'brush' | 'wand'>('brush');
+  protected readonly brushSize = signal(0.12);
+  protected readonly wandSpread = signal(35);
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
 
   protected selectTool(id: string): void {
