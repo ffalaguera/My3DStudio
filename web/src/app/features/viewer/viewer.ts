@@ -127,6 +127,9 @@ export class Viewer implements AfterViewInit, OnDestroy {
   private readonly adjacency = new WeakMap<THREE.Mesh, Int32Array>();
   private worldRadius = 1;
   private readonly raycaster = new THREE.Raycaster();
+  /** Picado por GPU (herramienta «pieza»): cada pieza se dibuja con un color-id en un buffer oculto. */
+  private pickTarget?: THREE.WebGLRenderTarget;
+  private readonly pickMats: THREE.MeshBasicMaterial[] = [];
   /** Trazo en curso: valores de color previos de cada vértice tocado (para deshacer). */
   private strokePrev: Map<string, Change> | null = null;
   private readonly undoStack: { mesh: THREE.Mesh; changes: Change[] }[] = [];
@@ -215,6 +218,8 @@ export class Viewer implements AfterViewInit, OnDestroy {
     this.controls?.dispose();
     this.clear();
     this.paintMat?.dispose();
+    this.pickTarget?.dispose();
+    this.pickMats.forEach((m) => m.dispose());
     this.env?.dispose();
     this.renderer?.dispose();
   }
@@ -380,6 +385,13 @@ export class Viewer implements AfterViewInit, OnDestroy {
   /** Pica la malla bajo el puntero y pinta las caras alrededor (pincel) o la zona conectada (varita). */
   private paintAt(e: PointerEvent): void {
     if (!this.model || !this.meshes.length) return;
+    // «pieza»: se pinta la pieza que se VE bajo el cursor (picado por GPU), no la geométricamente más cercana:
+    // las piezas del motor se solapan, así que el raycast podía elegir una pieza interna tapada por la de delante.
+    if (this.tool() === 'part') {
+      const mesh = this.pickMesh(e);
+      if (mesh) this.fillMeshStroke(mesh);
+      return;
+    }
     const dom = this.renderer!.domElement;
     const rect = dom.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
@@ -388,12 +400,46 @@ export class Viewer implements AfterViewInit, OnDestroy {
     const hit = this.raycaster.intersectObjects(this.meshes, false)[0];
     if (!hit || hit.faceIndex == null) return;
     const mesh = hit.object as THREE.Mesh;
-    // «pieza»: un clic pinta toda la malla (una pieza del modelo separado)
-    if (this.tool() === 'part') { this.fillMeshStroke(mesh); return; }
     const faces = this.tool() === 'wand'
       ? this.wandFaces(mesh, hit.faceIndex)
       : this.brushFaces(mesh, hit.faceIndex, hit.point);
     this.paintFaces(mesh, faces);
+  }
+
+  /** Dibuja cada pieza de un color-id en un buffer oculto y lee el píxel bajo el cursor: la pieza visible. */
+  private pickMesh(e: PointerEvent): THREE.Mesh | null {
+    const r = this.renderer;
+    if (!r || !this.meshes.length) return null;
+    const dom = r.domElement;
+    const rect = dom.getBoundingClientRect();
+    const px = Math.min(dom.width - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * dom.width)));
+    const py = Math.min(dom.height - 1, Math.max(0, Math.floor(dom.height - ((e.clientY - rect.top) / rect.height) * dom.height)));
+    const rt = (this.pickTarget ??= new THREE.WebGLRenderTarget(1, 1));
+    if (rt.width !== dom.width || rt.height !== dom.height) rt.setSize(dom.width, dom.height);
+    const prev = this.meshes.map((m) => m.material);
+    this.meshes.forEach((m, i) => {
+      const pm = (this.pickMats[i] ??= new THREE.MeshBasicMaterial({ toneMapped: false }));
+      pm.color.setRGB((i + 1) / 255, 0, 0, THREE.LinearSRGBColorSpace);
+      m.material = pm;
+    });
+    const gridWas = this.gridHelper.visible;
+    this.gridHelper.visible = false;
+    const clearC = new THREE.Color();
+    r.getClearColor(clearC);
+    const clearA = r.getClearAlpha();
+    r.setRenderTarget(rt);
+    r.setClearColor(0x000000, 1);
+    r.clear();
+    r.render(this.scene, this.camera);
+    const buf = new Uint8Array(4);
+    r.readRenderTargetPixels(rt, px, py, 1, 1, buf);
+    r.setRenderTarget(null);
+    r.setClearColor(clearC, clearA);
+    this.meshes.forEach((m, i) => { m.material = prev[i]; });
+    this.gridHelper.visible = gridWas;
+    this.dirty = true;
+    const id = buf[0] - 1;
+    return id >= 0 && id < this.meshes.length ? this.meshes[id] : null;
   }
 
   /** Caras dentro del radio del pincel, creciendo por vecindad desde la cara picada. */
