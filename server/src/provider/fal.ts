@@ -1,3 +1,4 @@
+import { fal } from '@fal-ai/client';
 import { gltfIO } from '../lib/gltf.js';
 import type { GenerationInput, GenerationOutput, GenerationProvider } from './provider.js';
 import { ProviderError } from './provider.js';
@@ -150,11 +151,17 @@ export class FalProvider implements GenerationProvider {
     return { bytes, contentType: 'image/png' };
   }
 
-  /** Separa el modelo en piezas con Tripo (fal-ai: tripo3d/tripo/segment). El GLB va como data URI en mesh_url. */
+  /** Separa el modelo en piezas con Tripo (fal-ai: tripo3d/tripo/segment). El GLB se sube a fal y se pasa su URL. */
   async segment(glb: Buffer, signal: AbortSignal): Promise<{ glb: Buffer; parts: number }> {
-    // 150 MB es el tope de fal; con data URI (base64 ≈ +33 %) se deja margen
-    if (glb.length > 100 * 1024 * 1024) throw new ProviderError('El modelo es demasiado grande para separarlo en piezas');
-    const meshUrl = `data:model/gltf-binary;base64,${glb.toString('base64')}`;
+    if (glb.length > 140 * 1024 * 1024) throw new ProviderError('El modelo es demasiado grande para separarlo en piezas');
+    // fal no acepta el GLB como data URI (URL demasiado larga): se sube a su almacén y se pasa la URL corta
+    let meshUrl: string;
+    try {
+      fal.config({ credentials: this.o.key });
+      meshUrl = await fal.storage.upload(new File([new Uint8Array(glb)], 'model.glb', { type: 'model/gltf-binary' }));
+    } catch (e) {
+      throw new ProviderError('No se ha podido preparar el modelo para separarlo en piezas', true);
+    }
     const out = await this.run<{ model_urls?: { glb?: { url?: string } }; model_mesh?: { url?: string }; part_names?: string[] }>(
       'tripo3d/tripo/segment', { mesh_url: meshUrl }, signal, async () => {});
     const url = out.model_urls?.glb?.url || out.model_mesh?.url;
