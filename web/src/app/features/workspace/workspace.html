@@ -184,8 +184,10 @@
     @let t = selectedTask();
     @let a = asset();
     @if (a) {
-      <app-viewer #viewer class="flex-1" [url]="a.glbUrl" [name]="a.name"
-        [paint]="activeTool() === 'texture'" [tool]="paintTool()" [paintColor]="activeColor()"
+      <app-viewer #viewer class="flex-1" [name]="a.name"
+        [url]="activeTool() === 'segment' ? (partsUrl() ?? a.glbUrl) : a.glbUrl"
+        [paint]="activeTool() === 'texture' || (activeTool() === 'segment' && partsUrl() !== null)"
+        [tool]="activeTool() === 'segment' ? 'part' : paintTool()" [paintColor]="activeColor()"
         [brushSize]="brushSize()" [wandSpread]="wandSpread()"
         [statsLine]="(a.faceCount | number: '1.0-0' : 'es') + ' caras · ' + (a.vertexCount | number: '1.0-0' : 'es') + ' vértices'" />
 
@@ -230,6 +232,35 @@
             <button type="button" class="btn btn-secondary btn-sm flex-1" (click)="viewer.fillAll()">Rellenar todo</button>
             <button type="button" class="btn btn-ghost btn-sm" (click)="viewer.undo()" [disabled]="!viewer.canUndo()" aria-label="Deshacer"><ui-icon name="rotate-ccw" [size]="14" /></button>
           </div>
+        </div>
+      }
+
+      <!-- Pestaña «Piezas»: separa el modelo en piezas de verdad y colorea cada una de un clic -->
+      @if (activeTool() === 'segment') {
+        <div class="absolute left-3 top-14 w-60 panel shadow-float p-3 flex flex-col gap-3" role="group" aria-label="Piezas de la figura">
+          <p class="text-xs font-semibold">Pintar por piezas</p>
+          @if (partsUrl() === null) {
+            <p class="hint">Separa el modelo en piezas (orejas, cabeza…) con el motor 3D. Luego pintas cada pieza de un clic. Cuesta unos céntimos y se guarda.</p>
+            @if (segmentError()) { <p class="error-text" role="alert">{{ segmentError() }}</p> }
+            <button type="button" class="btn btn-primary btn-sm" (click)="separate()" [disabled]="segmenting()" [attr.aria-busy]="segmenting()">
+              @if (segmenting()) { <ui-icon name="loader-circle" class="animate-spin" [size]="14" /> Separando… }
+              @else { <ui-icon name="puzzle" [size]="14" /> Separar en piezas }
+            </button>
+          } @else {
+            <p class="hint">Haz clic en una pieza del modelo para pintarla del color elegido.</p>
+            <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Color">
+              @for (c of printColors; track c.id) {
+                <button type="button" (click)="activeColor.set(c.hex)" [attr.aria-pressed]="activeColor() === c.hex" [title]="c.name"
+                  class="w-7 h-7 rounded-full border-2" [style.background]="c.hex"
+                  [class.border-text]="activeColor() === c.hex" [class.border-border]="activeColor() !== c.hex"></button>
+              }
+              <label class="w-7 h-7 rounded-full border-2 border-border grid place-items-center cursor-pointer overflow-hidden" title="Otro color">
+                <ui-icon name="plus" [size]="14" />
+                <input type="color" class="sr-only" [value]="activeColor()" (input)="activeColor.set($any($event.target).value)" aria-label="Elegir otro color" />
+              </label>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm self-start" (click)="viewer.undo()" [disabled]="!viewer.canUndo()"><ui-icon name="rotate-ccw" [size]="14" /> Deshacer</button>
+          }
         </div>
       }
       <div class="absolute left-3 top-3 right-16 flex flex-wrap items-center gap-2">

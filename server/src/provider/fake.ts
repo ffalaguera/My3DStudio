@@ -2,6 +2,7 @@ import { deflateSync } from 'node:zlib';
 import { Document, NodeIO } from '@gltf-transform/core';
 import type { GenerationInput, GenerationOutput, GenerationProvider } from './provider.js';
 import { ProviderError } from './provider.js';
+import { splitIntoParts } from '../lib/segment.js';
 
 // Proveedor falso: construye un objeto procedural (vasija de revolución) como GLB.
 // Sirve para desarrollar y probar todo el sistema sin GPU. Un prompt o archivo con "fallo" falla al 30 %.
@@ -106,6 +107,12 @@ export class FakeProvider implements GenerationProvider {
     if (/fallo/i.test(prompt)) throw new ProviderError('No se ha podido crear la imagen de referencia');
     const [r, g, b] = hsl((hash(prompt) % 360) / 360, 0.45, 0.55).map((c) => Math.round(c * 255));
     return { bytes: discPng(512, [r, g, b]), contentType: 'image/png' };
+  }
+
+  /** Demostración: parte el modelo en trozos por cercanía espacial, sin coste (no son piezas reales). */
+  async segment(glb: Buffer, signal: AbortSignal): Promise<{ glb: Buffer; parts: number }> {
+    await sleep(Math.min(this.stepMs, 600), signal);
+    return splitIntoParts(glb, 8);
   }
 }
 

@@ -7,6 +7,8 @@ import { convert, convertForPrint, CONTENT_TYPE, printReport, type Format, type 
 import { HttpError, uuid } from '../lib/http.js';
 import * as ser from '../lib/serialize.js';
 import { assertOwner } from './account.js';
+import { createProvider } from '../jobs/worker.js';
+import { ProviderError } from '../provider/provider.js';
 
 export function assetRoutes(ctx: Ctx) {
   const r = Router();
@@ -121,6 +123,39 @@ export function assetRoutes(ctx: Ctx) {
     }
     // en la URL va un nombre genérico (sin datos del usuario); el bonito lo pone el navegador con `filename`
     res.json({ url: await storage.signedGet(key, `modelo-${id.slice(0, 8)}.${format}`, 600), filename, ...(printInfo ? { print: printInfo } : {}) });
+  });
+
+  /** Separa el modelo en piezas para colorear cada una por separado. Cuesta unos céntimos (motor real); se cachea. */
+  r.post('/:id/segment', async (req, res) => {
+    const id = uuid.parse(req.params.id);
+    const userId = req.user!.id;
+    const a = await db.query(
+      `select a.name, f.storage_key from assets a
+         left join asset_files f on f.asset_id = a.id and f.format = 'glb' and f.options_hash = 'default'
+        where a.id = $1 and a.user_id = $2 and a.kind = 'model'`, [id, userId]);
+    assertOwner(a, 'El modelo no existe');
+    if (!a.rows[0].storage_key) throw new HttpError(409, 'not_ready', 'El modelo aún no está listo');
+    // si ya se separó antes, se devuelve lo guardado (no se vuelve a pagar)
+    const done = await db.query(
+      `select storage_key from asset_files where asset_id = $1 and format = 'glb' and options_hash = 'segmented'`, [id]);
+    if (done.rowCount) return res.json({ url: await storage.signedGet(done.rows[0].storage_key), parts: null, cached: true });
+
+    const glb = await storage.read(a.rows[0].storage_key);
+    const ac = new AbortController();
+    req.on('close', () => { if (!res.writableEnded) ac.abort(); });
+    let seg: { glb: Buffer; parts: number };
+    try {
+      seg = await createProvider(ctx).segment(glb, ac.signal);
+    } catch (e) {
+      if (!(e instanceof ProviderError)) console.error('[segment] fallo', (e as Error).message);
+      throw new HttpError(502, 'segment_failed', e instanceof ProviderError ? e.message : 'No se ha podido separar el modelo en piezas');
+    }
+    const key = `u/${userId}/assets/${id}/segmented.glb`;
+    await storage.write(key, seg.glb, 'model/gltf-binary');
+    await db.query(
+      `insert into asset_files (asset_id, format, options_hash, storage_key, size_bytes) values ($1,'glb','segmented',$2,$3) on conflict do nothing`,
+      [id, key, seg.glb.length]);
+    res.json({ url: await storage.signedGet(key), parts: seg.parts });
   });
 
   return r;

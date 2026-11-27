@@ -301,6 +301,10 @@ export class HttpApi extends Api implements OnDestroy {
     return r;
   }
 
+  async segmentAsset(id: string): Promise<{ url: string; parts: number | null }> {
+    return this.req<{ url: string; parts: number | null }>('POST', `/assets/${id}/segment`);
+  }
+
   async checkout(planId: string, interval: 'month' | 'year'): Promise<void> {
     const { url } = await this.req<{ url: string }>('POST', '/billing/checkout', { planId, interval });
     location.assign(url); // Stripe Checkout; vuelve a /cuenta?pago=ok

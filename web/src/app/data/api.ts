@@ -253,6 +253,8 @@ export abstract class Api {
   abstract deleteAsset(id: string): Promise<void>;
   /** STL y 3MF admiten `print`: altura final en mm y peana. Entonces vuelve también el informe de impresión. */
   abstract exportAsset(id: string, format: ExportFormat, print?: PrintOptions): Promise<{ url: string; filename: string; print?: PrintReport }>;
+  /** Separa el modelo en piezas y devuelve un GLB con una malla por pieza. */
+  abstract segmentAsset(id: string): Promise<{ url: string; parts: number | null }>;
   /** Vista previa antes de pagar: la imagen de referencia de un texto, sin gastar créditos. */
   abstract previewImage(prompt: string): Promise<Upload>;
 

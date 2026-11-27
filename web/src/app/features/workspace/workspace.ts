@@ -18,7 +18,7 @@ import { Handoff } from './handoff';
 const TOOLS = [
   { id: 'model', label: 'Modelo', icon: 'box', ready: true },
   { id: 'texture', label: 'Color', icon: 'paintbrush', ready: true },
-  { id: 'segment', label: 'Piezas', icon: 'puzzle', ready: false },
+  { id: 'segment', label: 'Piezas', icon: 'puzzle', ready: true },
   { id: 'retopo', label: 'Retopo', icon: 'grid-3x3', ready: false },
   { id: 'uv', label: 'UV', icon: 'scan', ready: false },
   { id: 'rig', label: 'Rig', icon: 'person-standing', ready: false },
@@ -59,10 +59,30 @@ export class Workspace {
   protected readonly paintTool = signal<'brush' | 'wand'>('brush');
   protected readonly brushSize = signal(0.12);
   protected readonly wandSpread = signal(35);
+  // Piezas: GLB ya separado en piezas (por asset), y estado de la llamada
+  protected readonly partsUrl = signal<string | null>(null);
+  protected readonly segmenting = signal(false);
+  protected readonly segmentError = signal('');
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
 
   protected selectTool(id: string): void {
     if (TOOLS.find((t) => t.id === id)?.ready) this.activeTool.set(id);
+  }
+
+  /** Separa el modelo en piezas (llamada al servidor) y carga el resultado en el visor. */
+  protected async separate(): Promise<void> {
+    const id = this.selectedAssetId();
+    if (!id || this.segmenting()) return;
+    this.segmenting.set(true);
+    this.segmentError.set('');
+    try {
+      const { url } = await this.api.segmentAsset(id);
+      this.partsUrl.set(url);
+    } catch (e) {
+      this.segmentError.set(e instanceof ApiError ? e.message : 'No se ha podido separar el modelo en piezas');
+    } finally {
+      this.segmenting.set(false);
+    }
   }
 
   // ---------------------------------------------------------------- formulario
@@ -142,6 +162,8 @@ export class Workspace {
       const id = this.selectedAssetId();
       const user = this.gates.session();
       this.assetError.set('');
+      this.partsUrl.set(null);
+      this.segmentError.set('');
       if (!id) return this.asset.set(null);
       if (!user) return this.asset.set(null);
       this.api.asset(id).then(

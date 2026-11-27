@@ -561,6 +561,11 @@ export class FakeApi extends Api implements OnDestroy {
     return { url: URL.createObjectURL(blob), filename: `${safe}.${format}` };
   }
 
+  async segmentAsset(): Promise<{ url: string; parts: number | null }> {
+    this.requireUser();
+    throw new ApiError(501, 'server_only', 'Separar en piezas se hace en el servidor');
+  }
+
   // ------------------------------------------------------------------ pagos
   async checkout(planId: string, interval: 'month' | 'year'): Promise<void> {
     this.requireUser();

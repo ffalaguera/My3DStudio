@@ -19,7 +19,7 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
 let viewerSeq = 0;
 type Nudge = 'left' | 'right' | 'up' | 'down' | 'in' | 'out';
 type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'no-webgl';
-export type PaintTool = 'brush' | 'wand';
+export type PaintTool = 'brush' | 'wand' | 'part';
 interface Change { i: number; prev: [number, number, number] }
 
 /** Viewer3D de components.md: carga un GLB por URL y permite pintar la figura por zonas (pincel y varita). */
@@ -265,7 +265,13 @@ export class Viewer implements AfterViewInit, OnDestroy {
       this.scene.add(this.model);
       neutralizeMetalness(this.model);
       this.meshes = [];
-      this.model.traverse((o) => { if ((o as THREE.Mesh).isMesh) this.meshes.push(o as THREE.Mesh); });
+      this.model.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        // las piezas del modelo separado llegan sin normales: sin ellas la luz no las ilumina y salen negras
+        if (!m.geometry.getAttribute('normal')) m.geometry.computeVertexNormals();
+        this.meshes.push(m);
+      });
       const sphere = new THREE.Box3().setFromObject(this.model).getBoundingSphere(new THREE.Sphere());
       this.worldRadius = sphere.radius || 1;
       this.gridHelper.position.y = new THREE.Box3().setFromObject(this.model).min.y;
@@ -309,11 +315,14 @@ export class Viewer implements AfterViewInit, OnDestroy {
       // el BVH y la capa de color pueden tardar en una malla densa: se hace tras pintar el spinner
       setTimeout(() => {
         this.paintMat ??= new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0, roughness: 0.65 });
-        const base = new THREE.Color(this.baseColor());
+        const fallback = new THREE.Color(this.baseColor());
         for (const m of this.meshes) {
           if (!this.originals.has(m)) this.originals.set(m, m.material);
           const g = m.geometry;
           if (!g.getAttribute('color')) {
+            // cada pieza arranca con el color de su propio material (así se distinguen las piezas); si no, el gris base
+            const mat = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial | undefined;
+            const base = mat?.color && (mat.color.r < 0.97 || mat.color.g < 0.97 || mat.color.b < 0.97) ? mat.color : fallback;
             const n = g.getAttribute('position').count;
             const arr = new Float32Array(n * 3);
             for (let i = 0; i < n; i++) { arr[i * 3] = base.r; arr[i * 3 + 1] = base.g; arr[i * 3 + 2] = base.b; }
@@ -379,6 +388,8 @@ export class Viewer implements AfterViewInit, OnDestroy {
     const hit = this.raycaster.intersectObjects(this.meshes, false)[0];
     if (!hit || hit.faceIndex == null) return;
     const mesh = hit.object as THREE.Mesh;
+    // «pieza»: un clic pinta toda la malla (una pieza del modelo separado)
+    if (this.tool() === 'part') { this.fillMeshStroke(mesh); return; }
     const faces = this.tool() === 'wand'
       ? this.wandFaces(mesh, hit.faceIndex)
       : this.brushFaces(mesh, hit.faceIndex, hit.point);
@@ -460,6 +471,26 @@ export class Viewer implements AfterViewInit, OnDestroy {
         }
         col.setXYZ(vi, c.r, c.g, c.b);
       }
+    }
+    col.needsUpdate = true;
+    this.dirty = true;
+  }
+
+  /** Pinta toda una malla (una pieza) del color activo, guardando los valores previos para deshacer. */
+  private fillMeshStroke(mesh: THREE.Mesh): void {
+    const col = mesh.geometry.getAttribute('color') as THREE.BufferAttribute | undefined;
+    if (!col) return;
+    const c = new THREE.Color(this.paintColor());
+    const key = (mesh.id << 24) ^ 1;
+    for (let i = 0; i < col.count; i++) {
+      if (this.strokePrev) {
+        const id = `${key}:${i}`;
+        if (!this.strokePrev.has(id)) {
+          this.strokePrev.set(id, Object.assign(
+            { i, prev: [col.getX(i), col.getY(i), col.getZ(i)] as [number, number, number] }, { mesh }));
+        }
+      }
+      col.setXYZ(i, c.r, c.g, c.b);
     }
     col.needsUpdate = true;
     this.dirty = true;

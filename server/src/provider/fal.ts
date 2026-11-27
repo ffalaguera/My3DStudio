@@ -150,6 +150,20 @@ export class FalProvider implements GenerationProvider {
     return { bytes, contentType: 'image/png' };
   }
 
+  /** Separa el modelo en piezas con Tripo (fal-ai: tripo3d/tripo/segment). El GLB va como data URI en mesh_url. */
+  async segment(glb: Buffer, signal: AbortSignal): Promise<{ glb: Buffer; parts: number }> {
+    // 150 MB es el tope de fal; con data URI (base64 ≈ +33 %) se deja margen
+    if (glb.length > 100 * 1024 * 1024) throw new ProviderError('El modelo es demasiado grande para separarlo en piezas');
+    const meshUrl = `data:model/gltf-binary;base64,${glb.toString('base64')}`;
+    const out = await this.run<{ model_urls?: { glb?: { url?: string } }; model_mesh?: { url?: string }; part_names?: string[] }>(
+      'tripo3d/tripo/segment', { mesh_url: meshUrl }, signal, async () => {});
+    const url = out.model_urls?.glb?.url || out.model_mesh?.url;
+    if (!url) throw new ProviderError('El motor no ha podido separar el modelo en piezas');
+    const seg = await this.download(url, signal, this.maxGlb);
+    if (seg.subarray(0, 4).toString('ascii') !== 'glTF') throw new ProviderError('El motor ha devuelto un archivo no válido');
+    return { glb: seg, parts: out.part_names?.length ?? 0 };
+  }
+
   private async download(url: string, signal: AbortSignal, max: number): Promise<Buffer> {
     // solo se descarga de fal (o de la URL base en los tests): evita que una respuesta manipulada haga
     // que el servidor pida URLs internas o de terceros

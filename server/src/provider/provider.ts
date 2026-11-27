@@ -39,4 +39,10 @@ export interface GenerationProvider {
    * Cuesta céntimos de céntimo; el modelo 3D se genera después a partir de esta imagen si el usuario la aprueba.
    */
   referenceImage(prompt: string, signal: AbortSignal): Promise<{ bytes: Buffer; contentType: 'image/png' }>;
+
+  /**
+   * Separa el modelo en piezas con sentido (orejas, cabeza…). Devuelve un GLB con una malla por pieza, para poder
+   * colorear cada una por separado. Cuesta unos céntimos por modelo (motor real); el falso lo aproxima sin coste.
+   */
+  segment(glb: Buffer, signal: AbortSignal): Promise<{ glb: Buffer; parts: number }>;
 }
